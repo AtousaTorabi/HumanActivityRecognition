@@ -1,0 +1,126 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:pylearn2_ECCV2014.HMDBDataset3.HMDBDataset {
+       data_path: '/data/lisatmp3/ballasn/HMDB/hdf5_64_time/',
+       split: 1,
+       which_set: 'train',
+       axes: ['c', 0, 1, 'b'],
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: 64,
+        layers: [
+                 !obj:NipsRush2014.customCpuDotMaxout.CpuConvMaxout {
+                     layer_name: 'h0',
+                     output_channels: 100,
+                     num_pieces: 1,
+                     kernel_shape: [1, 1],
+                     pool_shape: [1, 1],
+                     pool_stride: [1, 1],
+                     irange: .05,
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     max_kernel_norm: .9,
+                 }, # Output shape : 3000x20x1x64 in c01b or 64x3000x20x1 in bc01
+                 !obj:NipsRush2014.mlp3HOHA2.Conv1DReLU {
+                     layer_name: 'h1',
+                     irange: .05,
+                     output_channels: 500,
+                     kernel_shape: [3, 1],
+                     pool_type: 'max',
+                     pool_shape: [4, 1],
+                     pool_stride: [2, 1],
+                     border_mode: 'valid',
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     max_kernel_norm: .9,
+                 },
+                 !obj:NipsRush2014.mlp3HOHA2.Conv1DReLU {
+                     layer_name: 'h2',
+                     irange: .05,
+                     output_channels: 500,
+                     kernel_shape: [3, 1],
+                     pool_type: 'max',
+                     pool_shape: [4, 1],
+                     pool_stride: [2, 1],
+                     border_mode: 'valid',
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     max_kernel_norm: .9,
+                 },
+                 !obj:NipsRush2014.mlp3HOHA2.Conv1DReLU {
+                     layer_name: 'h3',
+                     irange: .05,
+                     output_channels: 500,
+                     kernel_shape: [3, 1],
+                     pool_type: 'max',
+                     pool_shape: [4, 1],
+                     pool_stride: [2, 1],
+                     border_mode: 'valid',
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     max_kernel_norm: .9,
+                 },
+                 !obj:NipsRush2014.customCpuDotMaxout.Pooling0 {
+                      layer_name: 'p',
+                 },
+                 !obj:pylearn2.models.maxout.Maxout {
+                     layer_name: 'h4',
+                     irange: .05,
+                     num_units: 240,
+                     num_pieces: 2,
+                     max_col_norm: 1.9
+                 },
+                !obj:pylearn2.models.mlp.Softmax {
+                     #max_col_norm: 1.9365,
+                     layer_name: 'y',
+                     n_classes: 51,
+                     irange: .005
+                },
+            ],
+        input_space: !obj:pylearn2.space.Conv2DSpace {
+            shape: [400, 10],
+            num_channels: 426,
+            axes: ['c', 0, 1, 'b'],
+        },
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        train_iteration_mode: 'batchwise_shuffled_sequential',
+        learning_rate: .1,
+        init_momentum: .9,
+        monitoring_dataset:
+            {
+                'train' : *train,
+                'valid' : !obj:pylearn2_ECCV2014.HMDBDataset3.HMDBDataset {
+                       data_path: '/data/lisatmp3/ballasn/HMDB/hdf5_64_time/',
+                       split: 1,
+                       which_set: 'valid',
+                       axes: ['c', 0, 1, 'b'],
+              },
+    },
+
+        #cost: !obj:pylearn2.costs.cost.SumOfCosts {
+        #    costs:[
+        #      !obj:pylearn2.costs.mlp.dropout.Dropout {
+        #         input_include_probs: { 'h0' : 1., 'h1' : 1., 'h3': 1., 'y': 1. },
+        #         input_scales: { 'h0': 1., 'h1' : 1., 'h3': 1., 'y': 1. }
+        #       },
+        #       !obj:pylearn2.costs.mlp.WeightDecay {
+        #         coeffs: [ .0006, 0., 0., .0006 ]
+        #       }
+        #   ]
+        #},
+        cost: !obj:pylearn2.costs.mlp.Default {},
+        termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+           channel_name: "valid_y_misclass",
+            prop_decrease: 0.,
+            N: 10000
+        },
+    },
+    extensions: [
+        !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+             channel_name: "valid_y_misclass",
+             save_path: "HMDB3ConvMax.pkl"
+        },
+          ],
+    save_path: "HMDB3ConvMax.pkl",
+    save_freq: 10
+}
