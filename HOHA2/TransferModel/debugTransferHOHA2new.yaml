@@ -1,0 +1,92 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:pylearn2_ECCV2014.atousaDatasetTransferHOHA2new.AtousaDataset {
+        which_set: 'train',
+        data_path: '/Tmp/torabi/ImprovedfeatureHOHA2HDF',
+        nbSamples: 100,
+        axes: ['c', 0, 1, 'b'],
+    },
+    model: !obj:pylearn2.monitor.push_monitor {
+        model: !pkl: "model_transferHOHA2.pkl",
+        name: "monitor_validation"
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        train_iteration_mode: 'batchwise_shuffled_sequential',
+        learning_rate: .3,
+        init_momentum: .9,
+        monitoring_dataset:
+            {
+                'train' : *train,
+                'valid' : !obj:pylearn2_ECCV2014.atousaDatasetTransferHOHA2new.AtousaDataset {
+                    which_set: 'valid',
+                    data_path: '/Tmp/torabi/ImprovedfeatureHOHA2HDF',
+                    nbSamples: 100,
+                    axes: ['c', 0, 1, 'b'],
+                },
+                'test' : !obj:pylearn2_ECCV2014.atousaDatasetTransferHOHA2new.AtousaDataset {
+                    which_set: 'test',
+                    data_path: '/Tmp/torabi/ImprovedfeatureHOHA2HDF',
+                    nbSamples: 100,
+                    axes: ['c', 0, 1, 'b'],
+                },
+            },   
+        cost: !obj:pylearn2.costs.mlp.dropout.Dropout {
+            input_include_probs: { 'h0' : 1., 'h2': 1., 'y': 1. },
+            input_scales: { 'h0': 1., 'h2': 1., 'y': 1. }
+        },
+        #cost: !obj:pylearn2.costs.cost.SumOfCosts {
+        #    costs:[
+        #      !obj:pylearn2.costs.mlp.dropout.Dropout {
+        #         input_include_probs: { 'h0' : 1., 'h2': 1., 'y': 1. },
+        #         input_scales: { 'h0': 1., 'h2': 1., 'y': 1. }
+        #       },
+        #       !obj:pylearn2.costs.mlp.WeightDecay {
+        #         coeffs: [ .0006, 0., .0006 ]
+        #       }
+        #   ]
+        #},
+        #termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+        #    channel_name: "valid_y_mistagging",
+        #    prop_decrease: 0.,
+        #    N: 10000
+        #},
+        #update_callbacks: !obj:pylearn2.training_algorithms.sgd.ExponentialDecay {
+         #   start: 300,
+          #  decay_factor: 1.00004,
+            # min_lr: .000001
+        #},
+    },
+    extensions: [
+        !obj:pylearn2_ECCV2014.save_latest2.MonitorBasedSaveLatest {
+             save_path: "/Tmp/torabi/ImprovedfeatureHOHA2HDF/model/modelepochHOHA2"
+        },
+        !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+             channel_name: 'valid_y_mean_avg_prec',
+             save_path: "/Tmp/torabi/ImprovedfeatureHOHA2HDF/model/maxout_bestMAP_HOHA2.pkl",
+             higher_is_better: True,
+        },
+        !obj:pylearn2_ECCV2014.meanAvgPrecSigmoidHOHA2.MeanAveragePrecisionExtension {
+            outputsFile: "/Tmp/torabi/ImprovedfeatureHOHA2HDF/outputs_acc.temp",
+            targetsFile: "/Tmp/torabi/ImprovedfeatureHOHA2HDF/targets_acc.temp",
+            channelNameMin: "y_min_avg_prec",
+            channelNameMean: "y_mean_avg_prec",
+            channelNameMax: "y_max_avg_prec",
+            channelNamesIndividual: 
+                [
+                    "y_avg_prec_AnswerPone",
+                    "y_avg_prec_DriveCar",
+                    "y_avg_prec_Eat",
+                    "y_avg_prec_FightPerson",
+                    "y_avg_prec_GetOutCar",
+                    "y_avg_prec_HandShake",
+                    "y_avg_prec_HugPerson",
+                    "y_avg_prec_Kiss",
+                    "y_avg_prec_Run",
+                    "y_avg_prec_SitDown",
+                    "y_avg_prec_SitUp",
+                    "y_avg_prec_StandUp",
+                ],
+        },
+          ],
+    save_path: "/Tmp/torabi/ImprovedfeatureHOHA2HDF/model/latestTransferHOHA2.pkl",
+    save_freq: 1
+}
