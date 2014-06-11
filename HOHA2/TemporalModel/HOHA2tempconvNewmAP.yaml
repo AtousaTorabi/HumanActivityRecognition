@@ -1,0 +1,154 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:pylearn2_ECCV2014.atousaDatasetHOHA2_bins.AtousaDataset {
+       data_path: '/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/',
+       which_set: 'train',
+       axes: ['c', 0, 1, 'b'],
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: 64,
+        layers: [
+                 !obj:pylearn2_ECCV2014.customCpuDotMaxout_conv.CpuConvMaxout {
+                     layer_name: 'h0',
+                     output_channels: 100,
+                     num_pieces: 1,
+                     kernel_shape: [1, 1],
+                     pool_shape: [1, 1],
+                     pool_stride: [1, 1],
+                     irange: .05,
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     max_kernel_norm: .9,
+                 }, # Output shape : 3000x20x1x64 in c01b or 64x3000x20x1 in bc01
+                 !obj:pylearn2_ECCV2014.meanAvgPrecmlp3HOHA2_conv.Conv1DReLU {
+                     layer_name: 'h1',
+                     irange: .05,
+                     output_channels: 500,
+                     kernel_shape: [3, 1],
+                     pool_type: 'max',
+                     pool_shape: [4, 1],
+                     pool_stride: [2, 1],
+                     border_mode: 'valid',
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     max_kernel_norm: .9,
+                 },
+                 !obj:pylearn2_ECCV2014.customCpuDotMaxout_conv.Pooling0 {
+                      layer_name: 'p',
+                 },
+                 !obj:pylearn2.models.maxout.Maxout {
+                     layer_name: 'h4',
+                     irange: .05,
+                     num_units: 240,
+                     num_pieces: 2,
+                     max_col_norm: 1.9
+                 },
+                #!obj:pylearn2.models.mlp.Softmax {
+                #     #max_col_norm: 1.9365,
+                #     layer_name: 'y',
+                #     n_classes: 51,
+                #     irange: .005
+                #},
+                !obj:pylearn2_ECCV2014.meanAvgPrecmlp3HOHA2_conv.Sigmoid {
+                     monitor_style: 'tagging',
+                     #max_col_norm: 1.9365,
+                     layer_name: 'y',
+                     dim: 12,
+                     irange: .05,
+                     targets_accumulator_file: "/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/targets_acc.temp",
+                     outputs_accumulator_file: "/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/outputs_acc.temp",
+                     dummy_channels: [
+                        "min_avg_prec",
+                        "mean_avg_prec",
+                        "max_avg_prec",
+                        "avg_prec_AnswerPhone",
+                        "avg_prec_DriveCar",
+                        "avg_prec_Eat",
+                        "avg_prec_FightPerson",
+                        "avg_prec_GetOutCar",
+                        "avg_prec_HandShake",
+                        "avg_prec_HugPerson",
+                        "avg_prec_Kiss",
+                        "avg_prec_Run",
+                        "avg_prec_SitDown",
+                        "avg_prec_SitUp",
+                        "avg_prec_StandUp",
+                    ],
+                },
+            ],
+        input_space: !obj:pylearn2.space.Conv2DSpace {
+            shape: [400, 10],
+            num_channels: 426,
+            axes: ['c', 0, 1, 'b'],
+        },
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        train_iteration_mode: 'batchwise_shuffled_sequential',
+        learning_rate: .1,
+        init_momentum: .9,
+        monitoring_dataset:
+            {
+                'train' : *train,
+                'valid' : !obj:pylearn2_ECCV2014.atousaDatasetHOHA2_bins.AtousaDataset {
+                       data_path: '/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/',
+                       #split: 1,
+                       which_set: 'valid',
+                       axes: ['c', 0, 1, 'b'],
+                },
+            },
+        #cost: !obj:pylearn2.costs.cost.SumOfCosts {
+        #    costs:[
+        #      !obj:pylearn2.costs.mlp.dropout.Dropout {
+        #         input_include_probs: { 'h0' : 1., 'h1' : 1., 'h3': 1., 'y': 1. },
+        #         input_scales: { 'h0': 1., 'h1' : 1., 'h3': 1., 'y': 1. }
+        #       },
+        #       !obj:pylearn2.costs.mlp.WeightDecay {
+        #         coeffs: [ .0006, 0., 0., .0006 ]
+        #       }
+        #   ]
+        #},
+        cost: !obj:pylearn2.costs.mlp.Default {},
+        #termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+        #   channel_name: "valid_y_mistagging",
+        #    prop_decrease: 0.,
+        #    N: 10000
+        #},
+    },
+    extensions: [
+        !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+             channel_name: 'valid_y_mean_avg_prec',
+             save_path: "/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/model/maxout_bestMAPHOHA2.pkl",
+             higher_is_better: True,
+        },
+        !obj:pylearn2_ECCV2014.meanAvgPrecmlp3HOHA2_conv.MeanAveragePrecisionExtension {
+            outputsFile: "/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/outputs_acc.temp",
+            targetsFile: "/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/targets_acc.temp",
+            channelNameMin: "y_min_avg_prec",
+            channelNameMean: "y_mean_avg_prec",
+            channelNameMax: "y_max_avg_prec",
+            channelNamesIndividual: 
+                [
+                    "y_avg_prec_AnswerPone",
+                    "y_avg_prec_DriveCar",
+                    "y_avg_prec_Eat",
+                    "y_avg_prec_FightPerson",
+                    "y_avg_prec_GetOutCar",
+                    "y_avg_prec_HandShake",
+                    "y_avg_prec_HugPerson",
+                    "y_avg_prec_Kiss",
+                    "y_avg_prec_Run",
+                    "y_avg_prec_SitDown",
+                    "y_avg_prec_SitUp",
+                    "y_avg_prec_StandUp",
+                ],
+        },
+        !obj:pylearn2_ECCV2014.save_latest2.MonitorBasedSaveLatest {
+             save_path: "/Tmp/torabi/ImprovedfeatureHOHA2HDF/model/modelepochHOHA2temporal"
+        },
+        #!obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+        #     channel_name: "valid_y_misclass",
+        #     save_path: "HMDB3ConvMax.pkl"
+        #},
+          ],
+    save_path: "/Tmp/torabi/ImprovedfeatureHOHA2HDFtemporal/model/latestHOHA2temporal.pkl",
+    save_freq: 5
+}
