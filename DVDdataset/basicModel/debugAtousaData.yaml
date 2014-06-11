@@ -1,0 +1,94 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:pylearn2_ECCV2014.atousaDataset.AtousaDataset {
+        which_set: 'train',
+        nbSamples: 100,
+        axes: ['c', 0, 1, 'b'],
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: 64,
+        layers: [
+                 !obj:pylearn2_ECCV2014.customCpuDotMaxout.CpuConvMaxout {
+                     layer_name: 'h0',
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     output_channels: 3000,
+                     num_pieces: 1,
+                     kernel_shape: [1, 1],
+                     pool_shape: [1, 1],
+                     pool_stride: [1, 1],
+                     irange: .005,
+                     max_kernel_norm: .9,
+                 },
+                 !obj:pylearn2.models.maxout.Maxout {
+                     layer_name: 'h2',
+                     irange: .005,
+                     num_units: 480,
+                     num_pieces: 2,
+                     max_col_norm: 1.9
+                 },
+                 !obj:pylearn2_ECCV2014.mlp3AtousaData.Sigmoid {
+                     monitor_style: 'tagging',
+                     #max_col_norm: 1.9365,
+                     layer_name: 'y',
+                     dim: 320,
+                     irange: .005
+                 },
+               
+            ],
+        input_space: !obj:pylearn2.space.Conv2DSpace {
+            shape: [1, 100],
+            num_channels: 426,
+            axes: ['c', 0, 1, 'b'],
+        },
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        train_iteration_mode: 'batchwise_shuffled_sequential',
+        learning_rate: .3,
+        init_momentum: .9,
+        monitoring_dataset:
+            {
+                'train' : *train,
+                #'valid' : !obj:pylearn2_ECCV2014.atousaDataset.AtousaDataset {
+                #    which_set: 'valid',
+                #    nbSamples: 100,
+                #    axes: ['c', 0, 1, 'b'],
+                #},   
+            },   
+        cost: !obj:pylearn2.costs.mlp.dropout.Dropout {
+            input_include_probs: { 'h0' : 1., 'h2': 1., 'y': 1. },
+            input_scales: { 'h0': 1., 'h2': 1., 'y': 1. }
+        },
+        #cost: !obj:pylearn2.costs.cost.SumOfCosts {
+        #    costs:[
+        #      !obj:pylearn2.costs.mlp.dropout.Dropout {
+        #         input_include_probs: { 'h0' : 1., 'h2': 1., 'y': 1. },
+        #         input_scales: { 'h0': 1., 'h2': 1., 'y': 1. }
+        #       },
+        #       !obj:pylearn2.costs.mlp.WeightDecay {
+        #         coeffs: [ .0006, 0., .0006 ]
+        #       }
+        #   ]
+        #},
+        #termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+        #    channel_name: "valid_y_mistagging",
+        #    prop_decrease: 0.,
+        #    N: 10000
+        #},
+        #update_callbacks: !obj:pylearn2.training_algorithms.sgd.ExponentialDecay {
+         #   start: 300,
+          #  decay_factor: 1.00004,
+            # min_lr: .000001
+        #},
+    },
+    extensions: [
+        !obj:pylearn2_ECCV2014.save_latest.MonitorBasedSaveLatest {
+             save_path: "modelepoch"
+        },
+        #!obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+        #     channel_name: 'valid_y_mistagging',
+        #     save_path: "maxout_bestMAPAtousaDataset1.pkl"
+        #},
+          ],
+    #save_path: "latestAtousaDataset1.pkl",
+    #save_freq: 1
+}
