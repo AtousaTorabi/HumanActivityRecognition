@@ -1,0 +1,16 @@
+chisq_kernel.py
+Calculates ``A'' by cross-validation as described in chi-squared_definition.docx as
+well as the ``D(H_i, H_j)'' for the train set (train x train) and test set (test x train),
+dumping the results to a file (TODO: fixup the format so it can directly be used by
+libsvm standalone scripts)
+
+map_for_svm.py
+Calculates the mAP off the tags predicted by libsvm's svm-predict on a trained model
+
+svm_predict.py
+Trains an SVM, collects the predicted outputs, saves the SVM, and then calculates
+and returns the mAP
+
+representation_extraction.py
+Extracts the previous-to-last layer representation of the data from the given model
+(e.g.: to be used as input for an SVM)

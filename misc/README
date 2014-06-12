@@ -1,0 +1,35 @@
+HOHA2files.txt
+Train set filenames for HOHA2
+
+HOHA2test_files.txt
+Test set filenames for HOHA2
+
+HOHA2train_tags.txt
+Train set tags part of HOHA2Tags.txt
+
+HOHA2test_tags.txt
+Test set tags part of HOHA2Tags.txt
+
+ensemble_prediction.py
+Given a model and dataset, performs ensemble prediction
+
+gen_fixedframes_bins.py
+Generates HDF files with fixed frame-length per timebin
+
+parse_splits.py
+Parses each split of UCF101 (or another dataset):
+-Parses label names and turns them into correct one-hot numerical labels
+-Randomizes labels and files position
+-Saves everything to ``prefix + {files, idx, labels}.txt''
+
+convert_to_hdf5.py
+Converts UCF101 features to HDF5
+
+count_feats.py
+Counts the features in UCF101 and outputs the result in NumFeatures_[which_set]_[split_num]_part_[start_idx].txt
+
+merge_hdf.py
+Merges the HDF5 files listed into a single HDF5 file
+
+make_hoha2_compat.py
+Generates DVD dataset tags in a HOHA2-compatible format
