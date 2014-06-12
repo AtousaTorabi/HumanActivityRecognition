@@ -19,3 +19,4 @@ debugTransferHOHA2new.yaml : Transfer model from DVDdataset for HOHA2 dataset
 
 debugTransferHOHA2new2.yaml : Transfer model from DVDdataset for HOHA2 dataset
 
+model_mm_cost_new.yaml : Basic HOHA2 model using Hugo's max-margin cost
