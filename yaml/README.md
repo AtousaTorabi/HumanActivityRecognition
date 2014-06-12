@@ -1,5 +1,5 @@
 
-HMDB3tempconv.yaml	: temporal 1D convolutional model for HMDB51 dataset
+HMDB3tempconv.yaml	: temporal 1D convolutional model for HMDB51 dataset\n
 debugAtousaData.yaml : basic model (dot layer+ maxout+ output layer) for DVDdataset
 debugAtousaData2.yaml : basic model (dot layer+ maxout+ output layer) for DVDdataset
 debugAtousaDataNewMean.yaml : basic model (dot layer+ maxout+ output layer) monitoring APs for DVDdataset
