@@ -1,0 +1,6 @@
+*.o
+whitened_hof/release/*
+whitened_hof/test_sequences/*
+*~
+*.swp
+*.swo
