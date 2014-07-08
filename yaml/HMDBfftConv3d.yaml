@@ -1,0 +1,95 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:HMDBDataset_fft.HMDBfftDataset {
+        data_path: '/data/lisatmp3/torabi/HMDB/',
+        split: 1,
+		which_set: 'train',
+        nb_x: 20,
+        nb_y: 16, 
+        nb_t: 12,
+        axes: ['b', 0, 1, 't','c'],   
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: *batch_size,
+        layers: [
+                 !obj:fft3dConvReLU.fft3dConvReLUPool {
+                     layer_name: 'h0',
+                     tied_b: 0,
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     num_channels: 128,
+                     num_pieces: 2,
+                     kernel_shape: [2, 2],
+                     kernel_sequence_length: 3,
+                     pool_shape: [6, 6],
+                     pool_stride: [2, 2],
+                     sequence_pool_shape: 2,
+                     irange: .005,
+                     max_kernel_norm: .9,
+                 },
+                 !obj:pylearn2.models.maxout.Maxout {
+                    layer_name: 'h1',
+                    irange: .005,
+                    num_units: 240,
+                    num_pieces: 5,
+                    max_col_norm: 1.9
+                 },
+                 !obj:pylearn2.models.mlp.Softmax {
+                     max_col_norm: 1.9365,
+                     layer_name: 'y',
+                     n_classes: 51,
+                     irange: .005
+                 }
+                ],
+        input_space: !obj:pylearn2.space.Conv3DSpace {
+            shape: [20, 16],
+            sequence_length: 12,
+            num_channels: 33,
+            axes: ['b', 0, 1, 't', 'c'],
+        },
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        learning_rate: .05,
+        init_momentum: .5,
+        monitoring_dataset:
+            {
+                'train' : *train,
+                'valid' : !obj:HMDBDataset_fft.HMDBfftDataset {
+                   data_path: '/data/lisatmp3/torabi/HMDB/',
+                   split: 1,
+		           which_set: 'valid',
+                   nb_x: 20,
+                   nb_y: 16, 
+                   nb_t: 12,
+                   axes: ['b', 0, 1, 't','c'],  
+                },
+            },
+        cost: !obj:pylearn2.costs.mlp.dropout.Dropout {
+            input_include_probs: { 'h0' : .8 },
+            input_scales: { 'h0': 1. }
+        },
+        termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+            channel_name: "valid_y_misclass",
+            prop_decrease: 0.,
+            N: 100
+        },
+        #termination_criterion: !obj:pylearn2.termination_criteria.EpochCounter {max_epochs: 1}
+    },
+    extensions: [
+        !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+             channel_name: 'valid_y_misclass',
+             save_path: "$best_model.pkl"
+        },
+        !obj:pylearn2.training_algorithms.sgd.MomentumAdjustor {
+            start: 1,
+            saturate: 250,
+            final_momentum: .6
+        },
+        !obj:pylearn2.training_algorithms.sgd.LinearDecayOverEpoch {
+            start: 1,
+            saturate: 250,
+            decay_factor: .01
+        }
+    ],
+    save_path: "latest_model.pkl",
+    save_freq: 1
+}
