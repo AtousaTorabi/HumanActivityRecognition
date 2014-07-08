@@ -340,7 +340,8 @@ class fft3dConvReLUPool(Layer):
 
         if self.input_normalization:
             state_below = self.input_normalization(state_below)
-		# permute axes ['b',0,1,'t','c'] to ['b', 'c', 't', 0, 1] (axes required for transformer)
+
+        # permute axes ['b',0,1,'t','c'] to ['b', 'c', 't', 0, 1] (axes required for transformer)
         state_below = state_below.dimshuffle(0,4,3,1,2)
         # fft 3d covolution		
         z = self.transformer.lmul(state_below)

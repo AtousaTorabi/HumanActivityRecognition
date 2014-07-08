@@ -43,8 +43,8 @@ import linear.fftconv
 
 class Conv3DBCT01(LinearTransform):
     """
-    A pylearn2 linear operator based on 2D convolution,
-    implemented using Alex Krizhevsky's cuda-convnet library.
+    A pylearn2 linear operator based on 3D convolution,
+    implemented using fft convolution.
 
     """
 
@@ -52,7 +52,7 @@ class Conv3DBCT01(LinearTransform):
             filters,
             signal_shape,
             filter_shape,
-            input_axes = ('c', 0, 1, 't', 'b'),
+            input_axes = ('b', 'c', 't', 0, 1),
             batch_size=None,
             output_axes = ('b', 'c', 't,' 0, 1),
             kernel_stride = (1, 1), pad=0,
@@ -67,6 +67,10 @@ class Conv3DBCT01(LinearTransform):
             raise NotImplementedError()
 
         if batch_size != None:
+            raise NotImplementedError()
+
+
+        if kernel_stride != (1, 1):
             raise NotImplementedError()
 
         self.input_axes = input_axes
@@ -104,11 +108,9 @@ class Conv3DBCT01(LinearTransform):
         aka, do convolution with input image x
 
         """
-
         check_cuda(str(type(self)) + ".lmul")
-        # TODO Why is it CPU??
-        print 'Por que?!?!', type(x)
         cpu = 'Cuda' not in str(type(x))
+        assert cpu
         if cpu:
             x = gpu_from_host(x)
 
@@ -120,37 +122,11 @@ class Conv3DBCT01(LinearTransform):
         if tuple(x_axes) != op_axes:
             x = x.dimshuffle(*[x_axes.index(axis) for axis in op_axes])
 
-        rval = fftconv.conv3d_fft(x, self.transformer.filters, image_shape=x.shape, filter_shape=self.transformer.filter_shape)
+        rval = fftconv.conv3d_fft(x,
+                                  self.transformer.filters,
+                                  image_shape = x.shape,
+                                  filter_shape = self.transformer.filter_shape)
 		
-        #_x_4d_shape = (
-        #        self.signal_shape[0],
-        #        self.signal_shape[1],
-        #        self.signal_shape[2],
-        #        self.signal_shape[3] * self.signal_shape[4])
-
-        
-		
-		#x = x.reshape(_x_4d_shape)
-
-        #x = gpu_contiguous(x)
-
-        #rval = FilterActs(self.pad, self.partial_sum, self.kernel_stride[0])(
-        #        x, self._filters)
-
-        #if cpu:
-        #    rval = host_from_gpu(rval)
-
-        #rval = rval.reshape((
-        #    self.filter_shape[3],
-        #    self.filter_shape[4],
-        #    rval.shape[1],
-        #    rval.shape[2],
-        #    self.signal_shape[3],
-        #    self.signal_shape[4]))
-
-        #rval = diagonal_subtensor(rval, 4, 0).sum(axis=0)
-
-        # Format the output based on the output space
         rval_axes = self.output_axes
         assert len(rval_axes) == 5
 
@@ -199,23 +175,23 @@ def make_random_conv3D(irange, input_axes, output_axes,
 
 def setup_detector_layer_bct01(layer, input_space, rng, irange):
     """
-    Takes steps to set up an object for use as being some kind of convolutional layer.
+    Takes steps to set up an object for use as being some kind of
+    convolutional layer.
     This function sets up only the detector layer.
-
     Parameters
     ----------
     layer: Any python object that allows the modifications described below and has
-        the following attributes:
-            pad: int describing amount of zero padding to add
-            kernel_shape: 2-element tuple or list describing spatial shape of kernel
-            fix_kernel_shape: bool, if true, will shrink the kernel shape to make it
-                feasible, as needed (useful for hyperparameter searchers)
-            detector_channels: The number of channels in the detector layer
-            init_bias: A numeric constant added to a tensor of zeros to initialize the
-                    bias
-            tied_b: If true, biases are shared across all spatial locations
+    the following attributes:
+         pad: int describing amount of zero padding to add
+         kernel_shape: 2-element tuple or list describing spatial shape of kernel
+         fix_kernel_shape: bool, if true, will shrink the kernel shape to make it
+         feasible, as needed (useful for hyperparameter searchers)
+         detector_channels: The number of channels in the detector layer
+         init_bias: A numeric constant added to a tensor of zeros to initialize the
+         bias
+         tied_b: If true, biases are shared across all spatial locations
 
-    input_space: A Conv2DSpace to be used as input to the layer
+    input_space: A Conv3DSpace to be used as input to the layer
 
     rng: a numpy RandomState or equivalent
 
@@ -252,6 +228,8 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
     # Store the input space
     self.input_space = input_space
 
+
+    ### FIXME Modify this to make the number of dummy channel good for current fft impl
     # Make sure number of channels is supported by cuda-convnet
     # (multiple of 4 or <= 3)
     # If not supported, pad the input with dummy channels
@@ -299,7 +277,7 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
     #    raise ValueError("Cuda-convnet requires the detector layer to have at least 16 channels.")
 
     # space required for fft-3dconv
-	self.detector_space = Conv3DSpace(shape=output_shape,
+    self.detector_space = Conv3DSpace(shape=output_shape,
                                       num_channels = self.detector_channels,
                                       sequence_length = output_sequence_length,
                                       axes = ('b', 'c', 't', 0, 1))
@@ -314,7 +292,7 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
                     self.kernel_sequence_length,
                     self.kernel_shape[0],
                     self.kernel_shape[1]
-                    )
+                   )
     # filter shape required for fft-3dconv ('b','c','t','0','1')
     signal_shape = (self.mlp.batch_size,
                     self.dummy_space.num_channels,

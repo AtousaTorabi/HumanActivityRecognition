@@ -34,8 +34,6 @@ class HMDBfftDataset(dataset.Dataset):
         self.axes = axes
         self.which_set = which_set
 
-
-
         ### Load data
         if which_set == 'train':
             self.data_path = data_path + '/%s_1/' % split
