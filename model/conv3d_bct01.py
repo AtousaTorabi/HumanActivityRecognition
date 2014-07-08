@@ -242,7 +242,6 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
     self.dummy_channels = 0
     self.dummy_space = Conv3DSpace(shape=input_space.shape,
                                    channels=input_space.num_channels + self.dummy_channels,
-                                   sequence_length = self.kernel_sequence_length,
                                    axes=('b', 'c', 't', 0, 1))
 
 
@@ -277,9 +276,9 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
     #    raise ValueError("Cuda-convnet requires the detector layer to have at least 16 channels.")
 
     # space required for fft-3dconv
+    output_shape = [output_shape[0], output_shape[1], output_sequence_length]
     self.detector_space = Conv3DSpace(shape=output_shape,
                                       num_channels = self.detector_channels,
-                                      sequence_length = output_sequence_length,
                                       axes = ('b', 'c', 't', 0, 1))
 
     if hasattr(self, 'partial_sum'):

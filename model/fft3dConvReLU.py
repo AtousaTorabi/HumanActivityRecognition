@@ -210,9 +210,10 @@ class fft3dConvReLUPool(Layer):
                                                     self.kernel_shape,
                                                     self.kernel_stride)]
         dummy_output_sequence_length = self.input_space.sequence_length - self.kernel_sequence_length + 1
+
+        dummy_output_shape = [dummy_output_shape[0], dummy_output_shape[1], dummy_output_sequence_length]
         dummy_detector_space = Conv3DSpace(shape=dummy_output_shape,
                                            num_channels = self.detector_channels,
-                                           sequence_length = dummy_output_sequence_length,
                                            axes = ('c', 0, 1, 't', 'b'))
         # check if it is ok !!!!!!
         dummy_detector = sharedX(dummy_detector_space.get_origin_batch(2)[0:16,:,:,0,:])

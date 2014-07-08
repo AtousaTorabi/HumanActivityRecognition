@@ -43,7 +43,9 @@ class HMDBfftDataset(dataset.Dataset):
         else: # test
            self.data_path = data_path + '/%s_2/' % split
 
-            
+        
+        print os.path.join(self.data_path, 'features.py.npy')
+        print
         self.data = np.load(os.path.join(self.data_path, 'features.py.npy'))
         self.labels = np.loadtxt(os.path.join(self.data_path, 'labels.txt'))
         self.nb_examples = self.labels.shape[0]
