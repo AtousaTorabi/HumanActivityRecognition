@@ -351,14 +351,13 @@ class fft3dConvReLUPool(Layer):
         # fft 3d covolution		
         z = self.transformer.lmul(state_below)
         
-        #if not hasattr(self, 'tied_b'):
-        #    self.tied_b = False
-        #if self.tied_b:
-        #    b = self.b.dimshuffle(0, 'x', 'x', 'x', 'x')
-        #else:
-        #    b = self.b.dimshuffle(0, 1, 2, 'x', 'x')
-		
-        z = z + b
+        # if not hasattr(self, 'tied_b'):
+        #     self.tied_b = False
+        # if self.tied_b:
+        #     b = self.b.dimshuffle(0, 'x', 'x', 'x', 'x')
+        # else:
+        #     b = self.b.dimshuffle(0, 1, 2, 'x', 'x', 'x')
+        # z = z + b
 
         if self.layer_name is not None:
             z.name = self.layer_name + '_z'
@@ -400,6 +399,7 @@ class fft3dConvReLUPool(Layer):
         #     raise NotImplementedError("num channles should always be dvisible by 16")
         
 
+        p = z
         self.output_space.validate(p)
 
         if not hasattr(self, 'output_normalization'):

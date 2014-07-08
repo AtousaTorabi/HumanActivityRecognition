@@ -38,7 +38,7 @@ from pylearn2.space import Conv3DSpace
 
 
 # FFT-based convolution implementation
-import HumanActivityRecognition.linear.conv3d.fftconv
+import HumanActivityRecognition.linear.conv3d.fftconv as conv
 
 
 class Conv3DBCT01(LinearTransform):
@@ -122,10 +122,10 @@ class Conv3DBCT01(LinearTransform):
         if tuple(x_axes) != op_axes:
             x = x.dimshuffle(*[x_axes.index(axis) for axis in op_axes])
 
-        rval = fftconv.conv3d_fft(x,
-                                  self.transformer.filters,
-                                  image_shape = x.shape,
-                                  filter_shape = self.transformer.filter_shape)
+        rval = conv.conv3d_fft(x,
+                               self._filters,
+                               image_shape = x.shape,
+                               filter_shape = self.filter_shape)
 		
         rval_axes = self.output_axes
         assert len(rval_axes) == 5
