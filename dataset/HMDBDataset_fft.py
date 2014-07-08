@@ -19,45 +19,42 @@ from pylearn2.space import VectorSpace, CompositeSpace
 
 class HMDBfftDataset(dataset.Dataset):
 
-    nbTags = 51
-    nb_feats = 33
-    nb_x = 20
-    nb_y = 16 
-    nb_t = 12
-    vidShape = [nb_x, nb_y, nb_t, nb_feats]
-	
-	#vidSize : 20(0)x16(1)x12('t')x33('c') 
-    vidSize = vidShape[0] * vidShape[1] * vidShape[2] * vidShape[3]
-    mapper = {'train': 0, 'valid': 1, 'test': 2}
-
     def __init__(self, data_path, split, which_set, axes, nb_x, nb_y, nb_t = ('b', 0, 1, 't','c')):
 
+        ### Datasets parameters
+        self.nbTags = 51
+        self.nb_feats = 33
+        self.nb_x = 20
+        self.nb_y = 16 
+        self.nb_t = 12
+        self.vidShape = [nb_x, nb_y, nb_t, nb_feats]
+        #vidSize : 20(0)x16(1)x12('t')x33('c') 
+        self.vidSize = vidShape[0] * vidShape[1] * vidShape[2] * vidShape[3]
+        self.mapper = {'train': 0, 'valid': 1, 'test': 2}
+        self.axes = axes
+        self.which_set = which_set
 
+
+
+        ### Load data
         if which_set == 'train':
-            
-            self.labels  = np.loadtxt(data_path + '/%s_1/labels.txt' % split)
             self.data_path = data_path + '/%s_1/' % split
         elif which_set == 'valid':
-           self.labels  = np.loadtxt(data_path + '/%s_0/labels.txt' % split)
            self.data_path = data_path + '/%s_0/' % split
-        else:
-           self.labels  = np.loadtxt(data_path + '/%s_2/labels.txt' % split)
+        else: # test
            self.data_path = data_path + '/%s_2/' % split
             
-        # load big matrix data (6755X126720)
-        self.data = numpy.loadtxt(self.data_path + which_set + '.txt.gz')
-		# reshape to (6755X20X16X33)
-		self.data = datatmp.reshape(self.data.shape[0], self.nb_x, self.nb_y, self.nb_t, self.nb_feats)
-
+        self.data = numpy.load(os.path.join(self.data_path, 'feature.npy'))
+        self.labels = np.load(os.path.join(data_path, 'labels.txt'))
         self.nb_examples = self.labels.shape[0]
-        self.which_set = which_set
-        self.nb_x= nb_x
-        self.nb_y= nb_y
-        self.nb_t= nb_t
-        self.axes = axes
-        self.vidShape = [self.nb_x, self.nb_y, self.nb_t, self.nb_feats]
-        self.vidSize = self.vidShape[0] * self.vidShape[1] * self.vidShape[2] * self.vidShape[3]
-        
+
+        # Reshape to (6755X20X16X33)
+        self.data = datatmp.reshape(self.data.shape[0],
+                                    self.nb_x, 
+                                    self.nb_y, 
+                                    self.nb_t,
+                                    self.nb_feats)
+
 
     def get_minibatch(self, firstIdx, lastIdx, batch_size,
                       data_specs, return_tuple):
@@ -66,18 +63,15 @@ class HMDBfftDataset(dataset.Dataset):
         y = numpy.zeros([lastIdx-firstIdx, self.nbTags],  dtype="float32")
      
 	    
-		#return a batch ('b', 0, 1, 't','c')
+        # Return a batch ('b', 0, 1, 't','c')
         x[0:batch_size,:,:,:,:] = self.data[firstIdx:lastIdx]
         y[0:batch_size,:] = self.labels[firstIdx:lastIdx];
  
         print "Returned a minibatch"
-
         return x, y
                                     
     def iterator(self, mode=None, batch_size=None, num_batches=None, topo=None,
                  targets=False, data_specs=None, return_tuple=False, rng=None):
-                     
-        
         return HMDBfftIterator(self, batch_size, num_batches, 
                                      data_specs, return_tuple, rng)
     
