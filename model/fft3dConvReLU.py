@@ -10,6 +10,8 @@ Multilayer Perceptron
 import math
 import sys
 import warnings
+from functools import wraps
+
 
 import numpy as np
 from theano import config

@@ -1,7 +1,6 @@
 import os
 import math
 import warnings
-import numpy
 import random
 import thread
 import time
@@ -10,7 +9,8 @@ try:
 except ImportError:
     warnings.warn("Couldn't import tables, so far DenseFeat is "
             "only supported with PyTables")
-import numpy
+import numpy as np
+
 from theano import config
 from pylearn2.datasets import dataset
 from pylearn2.utils.serial import load
@@ -19,17 +19,18 @@ from pylearn2.space import VectorSpace, CompositeSpace
 
 class HMDBfftDataset(dataset.Dataset):
 
-    def __init__(self, data_path, split, which_set, axes = ('b', 0, 1, 't','c')):
+    def __init__(self, data_path, split, which_set, axes = ('b', 'c', 't', 0, 1, )):
 
         ### Datasets parameters
         self.nbTags = 51
         self.nb_feats = 33
         self.nb_x = 20
-        self.nb_y = 16 
+        self.nb_y = 15
         self.nb_t = 12
-        self.vidShape = [nb_x, nb_y, nb_t, nb_feats]
+        self.vidShape = [self.nb_x, self.nb_y, self.nb_t, self.nb_feats]
         #vidSize : 20(0)x16(1)x12('t')x33('c') 
-        self.vidSize = vidShape[0] * vidShape[1] * vidShape[2] * vidShape[3]
+        self.vidSize = self.vidShape[0] * self.vidShape[1] * \
+                       self.vidShape[2] * self.vidShape[3]
         self.mapper = {'train': 0, 'valid': 1, 'test': 2}
         self.axes = axes
         self.which_set = which_set
@@ -41,24 +42,36 @@ class HMDBfftDataset(dataset.Dataset):
            self.data_path = data_path + '/%s_0/' % split
         else: # test
            self.data_path = data_path + '/%s_2/' % split
+
             
-        self.data = numpy.load(os.path.join(self.data_path, 'feature.npy'))
-        self.labels = np.load(os.path.join(data_path, 'labels.txt'))
+        self.data = np.load(os.path.join(self.data_path, 'features.py.npy'))
+        self.labels = np.loadtxt(os.path.join(self.data_path, 'labels.txt'))
         self.nb_examples = self.labels.shape[0]
 
         # Reshape to (6755X20X16X33)
-        self.data = datatmp.reshape(self.data.shape[0],
-                                    self.nb_x, 
-                                    self.nb_y, 
-                                    self.nb_t,
-                                    self.nb_feats)
+
+        print self.data.shape
+        print self.data.shape[0], self.nb_x, self.nb_y, self.nb_t, self.nb_feats
+        self.data = self.data.reshape(self.data.shape[0],
+                                      self.nb_t,
+                                      self.nb_x, 
+                                      self.nb_y, 
+                                      self.nb_feats)
+        ## Transform 'b', 't, 0, 1, 'c' to  'b', 'c', 't', 0, 1 
+        self.data  = np.swapaxes(self.data, 1, 4) # 'b, 'c', 0, 1, 't'
+        self.data  = np.swapaxes(self.data, 2, 4) # 'b, 'c', 't', 1, 0'
+        self.data  = np.swapaxes(self.data, 3, 4) # 'b, 'c', 't',  0, 1
+
+
+        print self.data.shape
+
 
 
     def get_minibatch(self, firstIdx, lastIdx, batch_size,
                       data_specs, return_tuple):
         
-        x = numpy.zeros([lastIdx-firstIdx,] + self.vidShape , dtype="float32")
-        y = numpy.zeros([lastIdx-firstIdx, self.nbTags],  dtype="float32")
+        x = np.zeros([lastIdx-firstIdx,] + self.vidShape , dtype="float32")
+        y = np.zeros([lastIdx-firstIdx, self.nbTags],  dtype="float32")
      
 	    
         # Return a batch ('b', 0, 1, 't','c')

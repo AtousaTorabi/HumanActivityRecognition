@@ -1,9 +1,8 @@
 !obj:pylearn2.train.Train {
     dataset: &train !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
-        data_path: '/data/lisatmp3/torabi/HMDB/',
+        data_path: '/state/partition2/ballas_n/HMDB/cuboids/',
         split: 1,
         which_set: 'train',
-        axes: ['b', 0, 1, 't','c'],   
     },
     model: !obj:pylearn2.models.mlp.MLP {
         batch_size: 64,
@@ -41,7 +40,7 @@
             shape: [20, 16],
             sequence_length: 12,
             num_channels: 33,
-            axes: ['b', 0, 1, 't', 'c'],
+            axes: ['b', 'c', 't', 0, 1],
         },
     },
     algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
@@ -50,17 +49,15 @@
         monitoring_dataset:
             {
                 'train' : *train,
-                'valid' : !obj:HumanActivityRecognition.datasets.HMDBDataset_fft.HMDBfftDataset {
+                'valid' : !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
                    data_path: '/state/partition2/ballas_n/HMDB/cuboids/',
                    split: 1,
                    which_set: 'valid',
-                   axes: ['b', 0, 1, 't','c'],  
                 },
-                'test' : !obj:HumanActivityRecognition.datasets.HMDBDataset_fft.HMDBfftDataset {
+                'test' : !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
                    data_path: '/state/partition2/ballas_n/HMDB/cuboids/',
                    split: 1,
                    which_set: 'test',
-                   axes: ['b', 0, 1, 't','c'],  
                 },
             },
         cost: !obj:pylearn2.costs.mlp.dropout.Dropout {
