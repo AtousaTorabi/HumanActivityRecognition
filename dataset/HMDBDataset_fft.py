@@ -19,7 +19,8 @@ from pylearn2.space import VectorSpace, CompositeSpace
 
 class HMDBfftDataset(dataset.Dataset):
 
-    def __init__(self, data_path, split, which_set, axes = ('b', 'c', 't', 0, 1, )):
+    def __init__(self, data_path, split, which_set,
+                 batch_size = 64, axes = ('b', 'c', 't', 0, 1, )):
 
         ### Datasets parameters
         self.nbTags = 51
@@ -48,7 +49,17 @@ class HMDBfftDataset(dataset.Dataset):
         print
         self.data = np.load(os.path.join(self.data_path, 'features.py.npy'))
         self.labels = np.loadtxt(os.path.join(self.data_path, 'labels.txt'))
-        self.nb_examples = self.labels.shape[0]
+
+
+        ### add sample to be divisible by batch_size
+        self.nb_examples = self.data.shape[0]
+        if (self.nb_examples % batch_size != 0):
+            to_add = batch_size - self.nb_examples % batch_size
+            self.data = np.append(self.data, self.data[0:to_add, :], axis = 0)
+            self.labels = np.append(self.labels, self.labels[0:to_add, :], axis = 0)
+
+        self.nb_examples = self.data.shape[0]
+
 
         # Reshape to (6755X20X16X33)
 
@@ -63,6 +74,7 @@ class HMDBfftDataset(dataset.Dataset):
         self.data  = np.swapaxes(self.data, 1, 4) # 'b, 'c', 0, 1, 't'
         self.data  = np.swapaxes(self.data, 2, 4) # 'b, 'c', 't', 1, 0'
         self.data  = np.swapaxes(self.data, 3, 4) # 'b, 'c', 't',  0, 1
+
 
 
         print self.data.shape
@@ -90,6 +102,8 @@ class HMDBfftDataset(dataset.Dataset):
     
     def has_targets(self):
         return True
+    def get_design_matrix(self, topo=None):
+        return self.data
         
     def get_topo_batch_axis(self):
         """

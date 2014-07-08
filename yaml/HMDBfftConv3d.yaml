@@ -44,6 +44,7 @@
     },
     algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
         learning_rate: .05,
+        train_iteration_mode: 'even_sequential',
         init_momentum: .5,
         monitoring_dataset:
             {

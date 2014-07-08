@@ -216,20 +216,24 @@ class fft3dConvReLUPool(Layer):
                                            num_channels = self.detector_channels,
                                            axes = ('c', 0, 1, 't', 'b'))
         # check if it is ok !!!!!!
-        dummy_detector = sharedX(dummy_detector_space.get_origin_batch(2)[0:16,:,:,0,:])
+        # dummy_detector = sharedX(dummy_detector_space.get_origin_batch(2)[0:16,:,:,0,:])
 
-        dummy_p = max_pool_c01b(c01b=dummy_detector, pool_shape=self.pool_shape,
-                                pool_stride=self.pool_stride,
-                                image_shape=self.detector_space.shape)
-        dummy_p = dummy_p.eval()
+        # dummy_p = max_pool_c01b(c01b=dummy_detector, pool_shape=self.pool_shape,
+        #                         pool_stride=self.pool_stride,
+        #                         image_shape=self.detector_space.shape)
+        # dummy_p = dummy_p.eval()
 
-        if self.detector_space.sequence_length % (self.sequence_pool_shape) != 0:
-            raise ValueError("The case where detector layer's sequence length doesn't divide sequene pool shape is not implmented")
+        # if self.detector_space.sequence_length % (self.sequence_pool_shape) != 0:
+        #     raise ValueError("The case where detector layer's sequence length doesn't divide sequene pool shape is not implmented")
+
+        dummy_p = dummy_output_shape
 
         output_sequence_length = self.detector_space.sequence_length / self.sequence_pool_shape
-        self.output_space = Conv3DSpace(shape=[dummy_p.shape[1], dummy_p.shape[2]],
-                                        sequence_length = int(output_sequence_length),
-                                        num_channels = self.num_channels, axes = ('c', 0, 1, 't', 'b') )
+        self.output_space = Conv3DSpace(shape=[dummy_p[0], 
+                                               dummy_p[1],
+                                               dummy_p[2]],
+                                        num_channels = self.num_channels,
+                                        axes = ('b', 'c', 't', 0, 1))
 
         print "Output space shape: {}, sequence length: {}".format(self.output_space.shape, self.output_space.sequence_length)
 
@@ -369,31 +373,31 @@ class fft3dConvReLUPool(Layer):
 	        #ReLUs
             z = T.maximum(z, 0)
 			# permute axes ['b', 'c', 't', 0, 1] -> ['c', 0, 1, 't', 'b'] (axes required for pooling )
-            z = z.dimshuffle(1,3,4,2,0)
-            # pool across axis 't'
-            if self.sequence_pool_shape != 1:
-                s = None
-                for i in xrange(self.sequence_pool_shape):
-                    t = z[:,:,:,i::self.sequence_pool_shape,:]
-                    if s is None:
-                        s = t
-                    else:
-                        s = T.maximum(s, t)
-                z = s
+        #     z = z.dimshuffle(1,3,4,2,0)
+        #     # pool across axis 't'
+        #     if self.sequence_pool_shape != 1:
+        #         s = None
+        #         for i in xrange(self.sequence_pool_shape):
+        #             t = z[:,:,:,i::self.sequence_pool_shape,:]
+        #             if s is None:
+        #                 s = t
+        #             else:
+        #                 s = T.maximum(s, t)
+        #         z = s
 
-            if self.detector_normalization:
-                z = self.detector_normalization(z)
+        #     if self.detector_normalization:
+        #         z = self.detector_normalization(z)
             
-            # spatial pooling x/y
-            z_shape = z.shape
-            z = z.reshape((z_shape[0], z_shape[1], z_shape[2], z_shape[3] * z_shape[4]))
-            p = max_pool_c01b(c01b=z, pool_shape=self.pool_shape,
-                              pool_stride=self.pool_stride,
-                              image_shape=self.detector_space.shape)
-            p_shape = p.shape
-            p = p.reshape((p_shape[0], p_shape[1], p_shape[2], z_shape[3], z_shape[4]))
-        else:
-            raise NotImplementedError("num channles should always be dvisible by 16")
+        #     # spatial pooling x/y
+        #     z_shape = z.shape
+        #     z = z.reshape((z_shape[0], z_shape[1], z_shape[2], z_shape[3] * z_shape[4]))
+        #     p = max_pool_c01b(c01b=z, pool_shape=self.pool_shape,
+        #                       pool_stride=self.pool_stride,
+        #                       image_shape=self.detector_space.shape)
+        #     p_shape = p.shape
+        #     p = p.reshape((p_shape[0], p_shape[1], p_shape[2], z_shape[3], z_shape[4]))
+        # else:
+        #     raise NotImplementedError("num channles should always be dvisible by 16")
         
 
         self.output_space.validate(p)
