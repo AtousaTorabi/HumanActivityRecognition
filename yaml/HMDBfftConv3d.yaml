@@ -1,17 +1,14 @@
 !obj:pylearn2.train.Train {
-    dataset: &train !obj:HMDBDataset_fft.HMDBfftDataset {
+    dataset: &train !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
         data_path: '/data/lisatmp3/torabi/HMDB/',
         split: 1,
-		which_set: 'train',
-        nb_x: 20,
-        nb_y: 16, 
-        nb_t: 12,
+        which_set: 'train',
         axes: ['b', 0, 1, 't','c'],   
     },
     model: !obj:pylearn2.models.mlp.MLP {
-        batch_size: *batch_size,
+        batch_size: 64,
         layers: [
-                 !obj:fft3dConvReLU.fft3dConvReLUPool {
+                 !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
                      layer_name: 'h0',
                      tied_b: 0,
                      W_lr_scale: .05,
@@ -53,13 +50,16 @@
         monitoring_dataset:
             {
                 'train' : *train,
-                'valid' : !obj:HMDBDataset_fft.HMDBfftDataset {
-                   data_path: '/data/lisatmp3/torabi/HMDB/',
+                'valid' : !obj:HumanActivityRecognition.datasets.HMDBDataset_fft.HMDBfftDataset {
+                   data_path: '/state/partition2/ballas_n/HMDB/cuboids/',
                    split: 1,
-		           which_set: 'valid',
-                   nb_x: 20,
-                   nb_y: 16, 
-                   nb_t: 12,
+                   which_set: 'valid',
+                   axes: ['b', 0, 1, 't','c'],  
+                },
+                'test' : !obj:HumanActivityRecognition.datasets.HMDBDataset_fft.HMDBfftDataset {
+                   data_path: '/state/partition2/ballas_n/HMDB/cuboids/',
+                   split: 1,
+                   which_set: 'test',
                    axes: ['b', 0, 1, 't','c'],  
                 },
             },

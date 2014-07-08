@@ -28,18 +28,18 @@ if cuda.cuda_enabled:
     from theano.sandbox.cuda import host_from_gpu
 
 from pylearn2.utils import sharedX
-from pylearn2.linear.conv2d import default_rng
-from pylearn2.linear.conv2d import default_sparse_rng
+from pylearn2.utils.rng import make_np_rng
+from pylearn2.linear.conv2d import default_seed, default_sparse_seed
 from pylearn2.linear.linear_transform import LinearTransform
 from pylearn2.sandbox.cuda_convnet import check_cuda
 from pylearn2.sandbox.cuda_convnet.filter_acts import FilterActs
 from pylearn2.sandbox.cuda_convnet.filter_acts import ImageActs
 from pylearn2.space import Conv3DSpace
-# move this to extra packages
-from pylearn2.packaged_dependencies.theanoconv3d2d.conv3d2d import diagonal_subtensor
+
 
 # FFT-based convolution implementation
-import linear.fftconv
+import HumanActivityRecognition.linear.conv3d.fftconv
+
 
 class Conv3DBCT01(LinearTransform):
     """
@@ -54,7 +54,7 @@ class Conv3DBCT01(LinearTransform):
             filter_shape,
             input_axes = ('b', 'c', 't', 0, 1),
             batch_size=None,
-            output_axes = ('b', 'c', 't,' 0, 1),
+            output_axes = ('b', 'c', 't', 0, 1),
             kernel_stride = (1, 1), pad=0,
             message = '', partial_sum=None):
 
@@ -154,7 +154,7 @@ def make_random_conv3D(irange, input_axes, output_axes,
     """
 
     if rng is None:
-        rng = default_rng()
+        rng = make_np_rng(rng, default_seed, which_method='uniform')
 
     _filter_4d_shape = (
                 filter_shape[0],
@@ -166,12 +166,12 @@ def make_random_conv3D(irange, input_axes, output_axes,
     W = sharedX(rng.uniform(-irange,irange,(_filter_4d_shape)))
 
     return Conv3DBCT01(filters = W,
-        input_axes = input_axes,
-        output_axes = output_axes,
-        signal_shape = signal_shape,
-        filter_shape = filter_shape,
-        kernel_stride = kernel_stride, pad=pad,
-        message = message, partial_sum=partial_sum)
+                       input_axes = input_axes,
+                       output_axes = output_axes,
+                       signal_shape = signal_shape,
+                       filter_shape = filter_shape,
+                       kernel_stride = kernel_stride, pad=pad,
+                       message = message, partial_sum=partial_sum)
 
 def setup_detector_layer_bct01(layer, input_space, rng, irange):
     """
@@ -303,7 +303,7 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
 
     self.transformer = make_random_conv3D(
           irange = self.irange,
-          input_axes = ('b', 'c', 't,' 0, 1),
+          input_axes = ('b', 'c', 't', 0, 1),
           output_axes = self.detector_space.axes,
           signal_shape = signal_shape,
           filter_shape = filter_shape,

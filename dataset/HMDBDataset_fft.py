@@ -19,7 +19,7 @@ from pylearn2.space import VectorSpace, CompositeSpace
 
 class HMDBfftDataset(dataset.Dataset):
 
-    def __init__(self, data_path, split, which_set, axes, nb_x, nb_y, nb_t = ('b', 0, 1, 't','c')):
+    def __init__(self, data_path, split, which_set, axes = ('b', 0, 1, 't','c')):
 
         ### Datasets parameters
         self.nbTags = 51
