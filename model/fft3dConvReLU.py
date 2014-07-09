@@ -202,13 +202,12 @@ class fft3dConvReLUPool(Layer):
             else:
                 raise ValueError("Stride too big.")
         assert all(isinstance(elem, py_integer_types) for elem in self.pool_stride)
-		
-		
+
         # added to find out output space shape after spatial pooling max_pool_c01b 
         dummy_output_shape = [int(np.ceil((i_sh + 2. * self.pad - k_sh) / float(k_st))) + 1
-                        for i_sh, k_sh, k_st in zip(self.input_space.shape,
-                                                    self.kernel_shape,
-                                                    self.kernel_stride)]
+                              for i_sh, k_sh, k_st in zip(self.input_space.shape,
+                                                          self.kernel_shape,
+                                                          self.kernel_stride)]
         dummy_output_sequence_length = self.input_space.sequence_length - self.kernel_sequence_length + 1
 
         dummy_output_shape = [dummy_output_shape[0], dummy_output_shape[1], dummy_output_sequence_length]
