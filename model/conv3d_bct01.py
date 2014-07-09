@@ -207,7 +207,7 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
             layer.dummy_space: The Conv2DSpace representing the input with dummy channels
                 added
         sets layer.detector_space to the space for the detector layer
-        sets layer.transformer to be a Conv2D instance
+        sets layer.transformer to be a Conv3DBCT01 instance
         sets layer.b to the right value
     """
 
