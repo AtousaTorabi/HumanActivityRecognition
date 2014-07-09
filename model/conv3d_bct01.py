@@ -158,14 +158,14 @@ def make_random_conv3D(irange, input_axes, output_axes,
     if rng is None:
         rng = make_np_rng(rng, default_seed, which_method='uniform')
 
-    _filter_4d_shape = (
+    _filter_5d_shape = (
                 filter_shape[0],
                 filter_shape[1],
                 filter_shape[2],
-                filter_shape[3] * filter_shape[4])
+                filter_shape[3],filter_shape[4])
 
 
-    W = sharedX(rng.uniform(-irange,irange,(_filter_4d_shape)))
+    W = sharedX(rng.uniform(-irange,irange,(_filter_5d_shape)))
 
     return Conv3DBCT01(filters = W,
                        input_axes = input_axes,
