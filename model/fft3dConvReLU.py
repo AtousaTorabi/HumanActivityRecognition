@@ -255,7 +255,7 @@ class fft3dConvReLUPool(Layer):
                 row_norms = T.sqrt(T.sum(T.sqr(updated_W), axis=(1)))
                 desired_norms = T.clip(row_norms, 0, self.max_kernel_norm)
                 scales = desired_norms / (1e-7 + row_norms)
-                updates[W] = updated_W * scales.dimshuffle(0, 'x')
+                updates[W] = updated_W #* scales.dimshuffle(0, 'x')
 
     @wraps(Layer.get_params)
     def get_params(self):
@@ -325,7 +325,7 @@ class fft3dConvReLUPool(Layer):
     def get_monitoring_channels(self):
 
         W, = self.transformer.get_params()
-        assert W.ndim == 4
+        assert W.ndim == 5
         sq_W = T.sqr(W)
 
         row_norms = T.sqrt(sq_W.sum(axis=(0,1,2)))
@@ -346,7 +346,7 @@ class fft3dConvReLUPool(Layer):
             state_below = self.input_normalization(state_below)
 
         # permute axes ['b',0,1,'t','c'] to ['b', 'c', 't', 0, 1] (axes required for transformer)
-        state_below = state_below.dimshuffle(0,4,3,1,2)
+        #state_below = state_below.dimshuffle(0,4,3,1,2)
         # fft 3d covolution		
         z = self.transformer.lmul(state_below)
         
@@ -356,20 +356,21 @@ class fft3dConvReLUPool(Layer):
         #     b = self.b.dimshuffle(0, 'x', 'x', 'x', 'x')
         # else:
         #     b = self.b.dimshuffle(0, 1, 2, 'x', 'x', 'x')
-        z = z + self.b
+        # z = z + self.b
+
 
         if self.layer_name is not None:
-            z.name = self.layer_name + '_z'
+           z.name = self.layer_name + '_z'
         self.detector_space.validate(z)
-        assert self.detector_space.num_channels % 16 == 0
+        #assert self.detector_space.num_channels % 16 == 0
 
-        if self.output_space.num_channels % 16 == 0:
+        #if self.output_space.num_channels % 16 == 0:
             # alex's max pool op only works when the number of channels
             # is divisible by 16. we can only do the cross-channel pooling
             # first if the cross-channel pooling preserves that property
             
-	        #ReLUs
-            z = T.maximum(z, 0)
+        #ReLUs
+        z = T.maximum(z, 0)
 			# permute axes ['b', 'c', 't', 0, 1] -> ['c', 0, 1, 't', 'b'] (axes required for pooling )
         #     z = z.dimshuffle(1,3,4,2,0)
         #     # pool across axis 't'
@@ -402,12 +403,13 @@ class fft3dConvReLUPool(Layer):
         self.output_space.validate(p)
 
         if not hasattr(self, 'output_normalization'):
-            self.output_normalization = None
+           self.output_normalization = None
 
         if self.output_normalization:
-            p = self.output_normalization(p)
+           p = self.output_normalization(p)
 
         return p
+
     def upward_pass(self, inputs):
         """
         Wrapper to fprop functions for PretrainedLayer class

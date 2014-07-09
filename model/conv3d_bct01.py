@@ -122,7 +122,7 @@ class Conv3DBCT01(LinearTransform):
         if tuple(x_axes) != op_axes:
             x = x.dimshuffle(*[x_axes.index(axis) for axis in op_axes])
 
-        rval = conv.Conv3DFFT(x.shape, self.filter_shape)(x, self._filters)
+        rval = conv.Conv3DFFT(self.signal_shape, self.filter_shape)(x, self._filters)
         #rval = conv.conv3d_fft(x,
         #                       self._filters,
         #                       image_shape = x.shape,
@@ -138,8 +138,7 @@ class Conv3DBCT01(LinearTransform):
         return rval
 
     def lmul_T(self, x):
-        return x
-        #raise NotImplementedError()
+        raise NotImplementedError()
 
     def lmul_sq_T(self, x):
         raise NotImplementedError()

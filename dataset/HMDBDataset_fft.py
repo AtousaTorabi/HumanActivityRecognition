@@ -28,7 +28,7 @@ class HMDBfftDataset(dataset.Dataset):
         self.nb_x = 20
         self.nb_y = 15
         self.nb_t = 12
-        self.vidShape = [self.nb_x, self.nb_y, self.nb_t, self.nb_feats]
+        self.vidShape = [self.nb_feats, self.nb_t, self.nb_x, self.nb_y]
         #vidSize : 20(0)x16(1)x12('t')x33('c') 
         self.vidSize = self.vidShape[0] * self.vidShape[1] * \
                        self.vidShape[2] * self.vidShape[3]
@@ -74,7 +74,6 @@ class HMDBfftDataset(dataset.Dataset):
         self.data  = np.swapaxes(self.data, 1, 4) # 'b, 'c', 0, 1, 't'
         self.data  = np.swapaxes(self.data, 2, 4) # 'b, 'c', 't', 1, 0'
         self.data  = np.swapaxes(self.data, 3, 4) # 'b, 'c', 't',  0, 1
-
 
 
         print self.data.shape
@@ -171,7 +170,6 @@ class HMDBfftIterator:
             else:
                 last = first + self._batch_size
             data =  self._dataset.get_minibatch(first, last,
-                                                self._batch_order[self._next_batch_no],
                                                 self._batch_size,
                                                 self._data_specs,
                                                 self._return_tuple)

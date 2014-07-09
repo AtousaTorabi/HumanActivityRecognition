@@ -143,6 +143,10 @@ class CuIFFTOp(ScikitsCudaOp):
 
         return thunk
 
+    def grad(self, inp, output_gradients):
+        return inp, output_gradients
+
+
 
 
 def to_complex_gpuarray(x, copyif=False):
@@ -451,7 +455,7 @@ def conv2d_fft(input, filters, image_shape=None, filter_shape=None):
 
 
 
-def conv3d_fft(input, filters, image_shape=None, filter_shape=None):
+def conv3d_fft(input, filters, image_shape, filter_shape):
     """
     expects bc01 input
     performs a valid convolution
@@ -459,13 +463,6 @@ def conv3d_fft(input, filters, image_shape=None, filter_shape=None):
     input: (b, ic, i0, i1)
     filters: (oc, ic, f0, f1)
     """
-
-    # use symbolic shapes to compute shape info at runtime if not specified
-    if image_shape is None:
-        image_shape = input.shape
-
-    if filter_shape is None:
-        filter_shape = filters.shape
 
     b, ic, i0, i1, i2 = image_shape # batch size, input channels, input dim 0, input dim 1
     oc, ic_, f0, f1, f2 = filter_shape # output channels, input channels, filter dim 0, filter dim 1
@@ -504,10 +501,11 @@ def conv3d_fft(input, filters, image_shape=None, filter_shape=None):
     output_circ = output_flat.reshape((b, oc, i0, i1, i2)) # circular!
 
     # slice because the convolution was circular, we need it to be valid
-    output = output_circ[:, :, f0 - 1:, f1 - 1:, f2 -1:]
+    output = output_circ[:, :, f0 - 1:, f1 - 1:, f2 -1:] # b, oc, 
 
     # rescale manually
     output = (1.0 / T.cast(i0 * i1, theano.config.floatX)) * output # allow for the scale factor to move to the gpu
+
 
     # output should now be the result of a batched valid convolution of the input with the filters.
     return output
