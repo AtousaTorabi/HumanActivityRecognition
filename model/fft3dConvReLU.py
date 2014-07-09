@@ -357,7 +357,7 @@ class fft3dConvReLUPool(Layer):
         #     b = self.b.dimshuffle(0, 'x', 'x', 'x', 'x')
         # else:
         #     b = self.b.dimshuffle(0, 1, 2, 'x', 'x', 'x')
-        # z = z + b
+        z = z + self.b
 
         if self.layer_name is not None:
             z.name = self.layer_name + '_z'
