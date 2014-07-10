@@ -47,7 +47,6 @@ class Conv3DBCT01(LinearTransform):
     implemented using fft convolution.
 
     """
-
     def __init__(self,
             filters,
             signal_shape,
@@ -151,8 +150,7 @@ def make_random_conv3D(irange, input_axes, output_axes,
         filter_shape,
         kernel_stride = (1,1), pad=0, message = "", rng = None,
         partial_sum = None):
-    """ Creates a Conv3D with random kernels.
-    """
+    
 
     if rng is None:
         rng = make_np_rng(rng, default_seed, which_method='uniform')
@@ -163,7 +161,7 @@ def make_random_conv3D(irange, input_axes, output_axes,
                 filter_shape[2],
                 filter_shape[3],filter_shape[4])
 
-
+    # initialize weights
     W = sharedX(rng.uniform(-irange,irange,(_filter_5d_shape)))
 
     return Conv3DBCT01(filters = W,
@@ -229,33 +227,21 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
     # Store the input space
     self.input_space = input_space
 
-
-    ### FIXME Modify this to make the number of dummy channel good for current fft impl
-    # Make sure number of channels is supported by cuda-convnet
-    # (multiple of 4 or <= 3)
-    # If not supported, pad the input with dummy channels
-    #ch = self.input_space.num_channels
-    #rem = ch % 4
-    #if ch > 3 and rem != 0:
-    #    self.dummy_channels = 4 - rem
-    #else:
-    #    self.dummy_channels = 0
-    self.dummy_channels = 0
-    self.dummy_space = Conv3DSpace(shape=input_space.shape,
-                                   channels=input_space.num_channels + self.dummy_channels,
-                                   axes=('b', 'c', 't', 0, 1))
+    #self.dummy_space = Conv3DSpace(shape=input_space.shape,
+    #                               channels=input_space.num_channels + self.dummy_channels,
+    #                               axes=('b', 'c', 't', 0, 1))
 
 
     if hasattr(self, 'kernel_stride'):
         kernel_stride = self.kernel_stride
     else:
         kernel_stride = [1, 1]
-
+    dummy_shape = [self.input_space.shape[0] , self.input_space.shape[1] ]
     output_shape = [int(np.ceil((i_sh + 2. * self.pad - k_sh) / float(k_st))) + 1
-                        for i_sh, k_sh, k_st in zip(self.input_space.shape,
+                        for i_sh, k_sh, k_st in zip(dummy_shape,
                                                     self.kernel_shape,
                                                     kernel_stride)]
-    output_sequence_length = self.input_space.sequence_length - self.kernel_sequence_length + 1
+    output_sequence_length = self.input_space.shape[2] - self.kernel_sequence_length + 1
     if output_sequence_length < 0:
         raise ValueError("Input sequence length ({}) should >= output sequence_length ({})".format(self.input_space.sequence_length, self.kernel_sequence_length))
 
@@ -273,9 +259,6 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
 
     map(handle_kernel_shape, [0, 1])
 
-    #if self.detector_channels < 16:
-    #    raise ValueError("Cuda-convnet requires the detector layer to have at least 16 channels.")
-
     # space required for fft-3dconv
     output_shape = [output_shape[0], output_shape[1], output_sequence_length]
     self.detector_space = Conv3DSpace(shape=output_shape,
@@ -288,14 +271,14 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
         partial_sum = 1
     # filter shape required for fft-3dconv ('c_detector','c','t','0','1')
     filter_shape = (self.detector_space.num_channels,
-                    self.dummy_space.num_channels,
+                    self.input_space.num_channels,
                     self.kernel_sequence_length,
                     self.kernel_shape[0],
                     self.kernel_shape[1]
                    )
     # filter shape required for fft-3dconv ('b','c','t','0','1')
     signal_shape = (self.mlp.batch_size,
-                    self.dummy_space.num_channels,
+                    self.input_space.num_channels,
                     self.input_space.sequence_length,
                     self.input_space.shape[0],
                     self.input_space.shape[1]
@@ -320,6 +303,3 @@ def setup_detector_layer_bct01(layer, input_space, rng, irange):
     else:
         self.b = sharedX(self.detector_space.get_origin() + self.init_bias)
     self.b.name = 'b'
-
-    print "Input space shape: {}, sequence length: {}".format(self.input_space.shape, self.input_space.sequence_length)
-    print "Detector space: {}, sequence length: {}".format(self.detector_space.shape, self.detector_space.sequence_length)
