@@ -32,9 +32,10 @@ from pylearn2.utils.rng import make_np_rng
 from pylearn2.linear.conv2d import default_seed, default_sparse_seed
 from pylearn2.linear.linear_transform import LinearTransform
 from pylearn2.sandbox.cuda_convnet import check_cuda
-from pylearn2.sandbox.cuda_convnet.filter_acts import FilterActs
-from pylearn2.sandbox.cuda_convnet.filter_acts import ImageActs
 from pylearn2.space import Conv3DSpace
+
+
+from theano.tensor.nnet.Conv3D import Conv3D
 
 
 # FFT-based convolution implementation
@@ -76,6 +77,8 @@ class Conv3DBCT01(LinearTransform):
         self.input_axes = input_axes
         self.output_axes = output_axes
 
+        self.conv3d_op = Conv3D()
+
         # filters should be a GPU shared variable.
         # I guess you could GpuFromHost them every time,
         # but if you're using this class you probably care
@@ -102,7 +105,7 @@ class Conv3DBCT01(LinearTransform):
         raw = self._filters.get_value(borrow=borrow)
         return np.transpose(raw, (outp, rows, cols, inp))
 
-    def lmul(self, x):
+    def lmul(self, x, b):
         """
         dot(x, A)
         aka, do convolution with input image x
@@ -118,22 +121,25 @@ class Conv3DBCT01(LinearTransform):
         x_axes = self.input_axes
         assert len(x_axes) == 5
 
-        op_axes = ('b', 'c', 't', 0, 1)
-        if tuple(x_axes) != op_axes:
-            x = x.dimshuffle(*[x_axes.index(axis) for axis in op_axes])
+        #op_axes = ('b', 0, 1, 't', 'c')
+        #if tuple(x_axes) != op_axes:
+        #    x = x.dimshuffle(*[x_axes.index(axis) for axis in op_axes])
 
-        rval = conv.Conv3DFFT(self.signal_shape, self.filter_shape)(x, self._filters)
+        rval = self.conv3d_op(x, self._filters, b, (1, 1, 1))
+        #rval = conv.Conv3DFFT(self.signal_shape, self.filter_shape)(x, self._filters)
         #rval = conv.conv3d_fft(x,
         #                       self._filters,
         #                       image_shape = x.shape,
         #                       filter_shape = self.filter_shape)
-		
+	
+	#rval = x
         rval_axes = self.output_axes
         assert len(rval_axes) == 5
 
-        if tuple(rval_axes) != op_axes:
-            rval = rval.dimshuffle(*[op_axes.index(axis) for axis in rval_axes])
 
+        #op_axes = ('b', 'c', 't', 0, 1)
+        #if tuple(rval_axes) != op_axes:
+        #    rval = rval.dimshuffle(*[op_axes.index(axis) for axis in rval_axes])
 
         return rval
 
