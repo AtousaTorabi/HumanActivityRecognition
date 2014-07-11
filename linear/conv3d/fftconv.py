@@ -65,11 +65,15 @@ class CuFFTOp(ScikitsCudaOp):
         def thunk():
             input_shape = inputs[0][0].shape
 
+
             # construct output shape
             output_shape = list(input_shape)
             output_shape[-1] = output_shape[-1] // 2 + 1 # DFT of real input is symmetric, no need to store redundant coefficients
             output_shape += [2] # extra dimension with length 2 for real/imag
             output_shape = tuple(output_shape)
+
+            print "fft:", input_shape, output_shape
+
 
             z = outputs[0]
 
@@ -116,6 +120,8 @@ class CuIFFTOp(ScikitsCudaOp):
             output_shape = list(input_shape[:-1]) # chop off the extra length-2 dimension for real/imag
             output_shape[-1] = (output_shape[-1] - 1) * 2 # restore full signal length
             output_shape = tuple(output_shape)
+
+            print "ifft:", input_shape, output_shape
 
             z = outputs[0]
 
@@ -288,6 +294,8 @@ class BatchedComplexDotOp(ScikitsCudaOp):
         outputs = [storage_map[v] for v in node.outputs]
 
         def thunk():
+
+            print "jheeeeeeeeere"
             bx = inputs[0]
             by = inputs[1]
 
@@ -307,7 +315,11 @@ class BatchedComplexDotOp(ScikitsCudaOp):
             output_b_pycuda = to_complex_gpuarray(bz[0])
 
             # fancy native batched version
+            print "jheeeeeeeeere2"
             sc_complex_dot_batched(input_bx_pycuda, input_by_pycuda, output_b_pycuda)
+            print "jheeeeeeeeere3"
+            print input_shape_x, input_shape_y
+            print input_by_pycuda.shape, input_by_pycuda.shape, output_b_pycuda.shape
 
         thunk.inputs = inputs
         thunk.outputs = outputs
@@ -338,6 +350,7 @@ def mult_and_reduce(input_fft_v, filters_fft_v, input_shape=None, filter_shape=N
 
     b, ic, i0, i1_f, _ = input_shape
     oc = filter_shape[0]
+
 
     # reshape to flatten the dimensions that are multiplied elemwise
     input_r = input_fft_v.reshape((b, ic, i0 * i1_f, 2))
@@ -454,8 +467,28 @@ def conv2d_fft(input, filters, image_shape=None, filter_shape=None):
     return output
 
 
+class ShapePrint(ScikitsCudaOp):
+    def output_type(self, inp):
+        return cuda.CudaNdarrayType(broadcastable=[False] * (inp.type.ndim))
 
-def conv3d_fft(input, filters, image_shape, filter_shape):
+    def make_thunk(self, node, storage_map, _, _2):
+        inputs = [storage_map[v] for v in node.inputs]
+        outputs = [storage_map[v] for v in node.outputs]
+
+        def thunk():
+            input_shape = inputs[0][0].shape
+            print input_shape
+            outputs[0] = inputs[0]
+
+        thunk.inputs = inputs
+        thunk.outputs = outputs
+        thunk.lazy = False
+        return thunk
+
+
+shapeprint = ShapePrint()
+def conv3d_fft(input, output,
+               filters, image_shape, filter_shape):
     """
     expects bc01 input
     performs a valid convolution
@@ -466,6 +499,9 @@ def conv3d_fft(input, filters, image_shape, filter_shape):
 
     b, ic, i0, i1, i2 = image_shape # batch size, input channels, input dim 0, input dim 1
     oc, ic_, f0, f1, f2 = filter_shape # output channels, input channels, filter dim 0, filter dim 1
+
+
+    input = shapeprint(input)
 
     # pad filters to input shape
     filters_padded = T.zeros((oc, ic, i0, i1, i2))
@@ -508,7 +544,7 @@ def conv3d_fft(input, filters, image_shape, filter_shape):
 
 
     # output should now be the result of a batched valid convolution of the input with the filters.
-    return output
+#    return output
 
 
 

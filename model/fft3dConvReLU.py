@@ -345,9 +345,7 @@ class fft3dConvReLUPool(Layer):
         if self.input_normalization:
             state_below = self.input_normalization(state_below)
 
-        # fft 3d covolution		
-        z = self.transformer.lmul(state_below)
-        
+
         # bias addition
         if not hasattr(self, 'tied_b'):
             self.tied_b = False
@@ -355,6 +353,11 @@ class fft3dConvReLUPool(Layer):
             b = self.b.dimshuffle(0, 'x', 'x', 'x', 'x')
         else:
             b = self.b.dimshuffle('x', 0, 1, 2, 3)
+
+        # 3d convolution		
+        z = self.transformer.lmul(state_below, self.b)
+
+        
         z = z + self.b
 
 
@@ -373,7 +376,8 @@ class fft3dConvReLUPool(Layer):
         z = T.maximum(z, 0)
 
         ## Pooling..
-			# permute axes ['b', 'c', 't', 0, 1] -> ['c', 0, 1, 't', 'b'] (axes required for pooling )
+        # permute axes ['b', 'c', 't', 0, 1] -> ['c', 0, 1, 't', 'b']
+        # (axes required for pooling )
         #     z = z.dimshuffle(1,3,4,2,0)
         #     # pool across axis 't'
         #     if self.sequence_pool_shape != 1:

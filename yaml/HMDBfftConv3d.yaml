@@ -23,6 +23,22 @@
                      irange: .005,
                      max_kernel_norm: .9,
                  },
+#!obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+#    layer_name: 'h1',
+#    tied_b: 0,
+#    W_lr_scale: .05,
+#    b_lr_scale: .05,
+#    num_channels: 128,
+#    # MUST BE ONE, not supported in the current code
+#    num_pieces: 1,
+#    kernel_shape: [2, 2],
+#    kernel_sequence_length: 1,
+#    pool_shape: [1, 1],
+#    pool_stride: [1, 1],
+#    sequence_pool_shape: 1,
+#    irange: .005,
+#    max_kernel_norm: .9,
+#},
                  # !obj:pylearn2.models.maxout.Maxout {
                  #    layer_name: 'h1',
                  #    irange: .005,

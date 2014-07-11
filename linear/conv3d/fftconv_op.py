@@ -76,9 +76,16 @@ class Conv3DFFT(cuda.GpuOp):
             if z[0] is None or z[0].shape != output_shape:
                  z[0] = cuda.CudaNdarray.zeros(output_shape)
 
-            z = conv.conv3d_fft(inp, filters,
-                                self.input_shape,
-                                self.filter_shape)
+            output_pycuda = to_gpuarray(z[0])
+
+
+            print "Perform Conv"
+            output_pycuda = conv.conv3d_fft(inp, filters,
+                                            output_pycuda,
+                                            self.input_shape,
+                                            self.filter_shape)
+            print "End of conv Conv"
+
 
         thunk.inputs = inputs
         thunk.outputs = outputs
@@ -106,10 +113,11 @@ class Conv3DFFT(cuda.GpuOp):
         #     raise TypeError("output gradients must be cuda")
 
 
-        #filters = filters.dimshuffle(1, 0, 2, 3, 4)
+        filters = filters.dimshuffle(1, 0, 2, 3, 4)
         #inputs = inputs.dimshuffle(1, 0, 2, 3, 4)
         #print inputs.shape, filters.shape, dout.shape
         d_inputs = conv.conv3d_fft(dout, inputs, dout.shape, inputs.shape)
-        d_filters = conv.conv3d_fft(dout, filters.T, dout.shape, filters.T.shape)
+        d_filters = conv.conv3d_fft(dout, filters, dout.shape, filters.shape)
+
         
-        return d_inputs, filters
+        return d_inputs, d_filters
