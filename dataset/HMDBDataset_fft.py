@@ -26,10 +26,10 @@ class HMDBfftDataset(dataset.Dataset):
         self.nbTags = 51
         self.nb_feats = 33
         self.nb_x = 20
-        self.nb_y = 15
+        self.nb_y = 20
         self.nb_t = 12
         self.vidShape = [self.nb_feats, self.nb_t, self.nb_x, self.nb_y]
-        #vidSize : 20(0)x16(1)x12('t')x33('c') 
+        #vidSize ('c' x 't' x 0 x 1) 
         self.vidSize = self.vidShape[0] * self.vidShape[1] * \
                        self.vidShape[2] * self.vidShape[3]
         self.mapper = {'train': 0, 'valid': 1, 'test': 2}
@@ -50,7 +50,6 @@ class HMDBfftDataset(dataset.Dataset):
         self.data = np.load(os.path.join(self.data_path, 'features.py.npy'))
         self.labels = np.loadtxt(os.path.join(self.data_path, 'labels.txt'))
 
-
         ### add sample to be divisible by batch_size
         self.nb_examples = self.data.shape[0]
         if (self.nb_examples % batch_size != 0):
@@ -58,11 +57,11 @@ class HMDBfftDataset(dataset.Dataset):
             self.data = np.append(self.data, self.data[0:to_add, :], axis = 0)
             self.labels = np.append(self.labels, self.labels[0:to_add, :], axis = 0)
 
+        # number of videos examples in the dataset
         self.nb_examples = self.data.shape[0]
 
 
-        # Reshape to (6755X20X16X33)
-
+        # Reshape to ('nb_videos' x 0 x 1 x 't' x 'c')
         print self.data.shape
         print self.data.shape[0], self.nb_x, self.nb_y, self.nb_t, self.nb_feats
         self.data = self.data.reshape(self.data.shape[0],
@@ -70,7 +69,7 @@ class HMDBfftDataset(dataset.Dataset):
                                       self.nb_x, 
                                       self.nb_y, 
                                       self.nb_feats)
-        ## Transform 'b', 't, 0, 1, 'c' to  'b', 'c', 't', 0, 1 
+        ## Transform 'b', 't, 0, 1, 'c'  to  'b', 'c', 't', 0, 1 
         self.data  = np.swapaxes(self.data, 1, 4) # 'b, 'c', 0, 1, 't'
         self.data  = np.swapaxes(self.data, 2, 4) # 'b, 'c', 't', 1, 0'
         self.data  = np.swapaxes(self.data, 3, 4) # 'b, 'c', 't',  0, 1
@@ -99,6 +98,9 @@ class HMDBfftDataset(dataset.Dataset):
         return HMDBfftIterator(self, batch_size, num_batches, 
                                      data_specs, return_tuple, rng)
     
+    def get_num_examples(self):
+        data_num_examples = len(self.labels)
+        return data_num_examples
     def has_targets(self):
         return True
     def get_design_matrix(self, topo=None):
@@ -150,8 +152,7 @@ class HMDBfftIterator:
         self._rng.shuffle(self._batch_order)
         self._return_tuple = return_tuple
         self._data_specs = data_specs
-        self.num_examples = self._dataset_size # Needed by Dataset interface
-        self.num_example = self.num_examples
+        self.num_examples = self._dataset_size 
         print self.num_examples
         
     def __iter__(self):
@@ -159,7 +160,7 @@ class HMDBfftIterator:
         
     def next(self):
         if self._next_batch_no >= self._num_batches:
-            print self.num_example
+            print self.num_examples
             print self._num_batches
             raise StopIteration()
         else:
