@@ -36,6 +36,7 @@ from pylearn2.utils import sharedX
 
 # setup detector layer for fft 3d convolution with axes bct01
 from HumanActivityRecognition.model.conv3d_bct01 import setup_detector_layer_bct01
+from HumanActivityRecognition.linear.conv3d_b01tc import setup_detector_layer_b01tc
 if cuda.cuda_available:
     from pylearn2.sandbox.cuda_convnet.pool import max_pool_c01b
 from pylearn2.linear import local_c01b
@@ -170,12 +171,16 @@ class fft3dConvReLUPool(Layer):
     def set_input_space(self, space):
         """ Note: this resets parameters! """
 
-        setup_detector_layer_bct01(layer=self,
+        # setup_detector_layer_bct01(layer=self,
+        #                            input_space=space,
+        #                            rng=self.mlp.rng,
+        #                            irange=self.irange)
+        # Use theano conv3d instead
+        setup_detector_layer_b01tc(layer=self,
                                    input_space=space,
                                    rng=self.mlp.rng,
                                    irange=self.irange)
         rng = self.mlp.rng
-
         detector_shape = self.detector_space.shape
        
         def handle_pool_shape(idx):
@@ -210,7 +215,10 @@ class fft3dConvReLUPool(Layer):
                                                           self.kernel_stride)]
         dummy_output_sequence_length = self.input_space.sequence_length - self.kernel_sequence_length + 1
 
-        dummy_output_shape = [dummy_output_shape[0], dummy_output_shape[1], dummy_output_sequence_length]
+        dummy_output_shape = [dummy_output_shape[0],
+                              dummy_output_shape[1],
+                              dummy_output_sequence_length]
+
         dummy_detector_space = Conv3DSpace(shape=dummy_output_shape,
                                            num_channels = self.detector_channels,
                                            axes = ('c', 0, 1, 't', 'b'))
@@ -227,18 +235,21 @@ class fft3dConvReLUPool(Layer):
 
         dummy_p = dummy_output_shape
 
-        output_sequence_length = self.detector_space.sequence_length / self.sequence_pool_shape
+        #output_sequence_length = self.detector_space.sequence_length / self.sequence_pool_shape
         self.output_space = Conv3DSpace(shape=[dummy_p[0], 
                                                dummy_p[1],
                                                dummy_p[2]],
                                         num_channels = self.num_channels,
-                                        axes = ('b', 'c', 't', 0, 1))
+                                        axes = ('b', 0, 1, 't', 'c'))
 
-        print "Output space shape: {}, sequence length: {}".format(self.output_space.shape, self.output_space.sequence_length)
+        print "Output space shape: {}, sequence length: {} {}".format(self.output_space.shape, self.output_space.sequence_length, self.num_channels)
 
         print "Input shape: ", self.input_space.shape
+        print "Input channel: ", self.input_space.num_channels
         print "Detector space: ", self.detector_space.shape
+        print "Detector channel: ", self.detector_space.num_channels
         print "Output space: ", self.output_space.shape
+        print "Output channel: ", self.output_space.num_channels
 
     @wraps(Layer.censor_updates)
     def censor_updates(self, updates):
@@ -333,6 +344,7 @@ class fft3dConvReLUPool(Layer):
         return OrderedDict([('kernel_norms_min',  row_norms.min()),
                             ('kernel_norms_mean', row_norms.mean()),
                             ('kernel_norms_max',  row_norms.max()), ])
+
 
     @wraps(Layer.fprop)
     def fprop(self, state_below):
