@@ -28,7 +28,7 @@ class HMDBfftDataset(dataset.Dataset):
         self.nb_x = 20
         self.nb_y = 20
         self.nb_t = 12
-        self.vidShape = [self.nb_feats, self.nb_t, self.nb_x, self.nb_y]
+        self.vidShape = [self.nb_x, self.nb_y, self.nb_t, self.nb_feats]
         #vidSize ('c' x 't' x 0 x 1) 
         self.vidSize = self.vidShape[0] * self.vidShape[1] * \
                        self.vidShape[2] * self.vidShape[3]
@@ -61,18 +61,25 @@ class HMDBfftDataset(dataset.Dataset):
         self.nb_examples = self.data.shape[0]
 
 
-        # Reshape to ('nb_videos' x 0 x 1 x 't' x 'c')
+        # Reshape to ('nb_videos' x 't' x 0 x 1 x 'c')
         print self.data.shape
         print self.data.shape[0], self.nb_x, self.nb_y, self.nb_t, self.nb_feats
         self.data = self.data.reshape(self.data.shape[0],
                                       self.nb_t,
                                       self.nb_x, 
-                                      self.nb_y, 
+                                      self.nb_y,
                                       self.nb_feats)
-        ## Transform 'b', 't, 0, 1, 'c'  to  'b', 'c', 't', 0, 1 
-        self.data  = np.swapaxes(self.data, 1, 4) # 'b, 'c', 0, 1, 't'
-        self.data  = np.swapaxes(self.data, 2, 4) # 'b, 'c', 't', 1, 0'
-        self.data  = np.swapaxes(self.data, 3, 4) # 'b, 'c', 't',  0, 1
+
+        ## Transform 'b', 't', 0, 1, 'c'  to  'b', 0, 1, 't', 'c' 
+        self.data  = np.swapaxes(self.data, 1, 2) # 'b, 0, 't', 1, 'c'
+        self.data  = np.swapaxes(self.data, 2, 3) # 'b, 0, 1, 't', 'c'
+
+
+
+        # ## Transform 'b', 't, 0, 1, 'c'  to  'b', 'c', 't', 0, 1 
+        # self.data  = np.swapaxes(self.data, 1, 4) # 'b, 'c', 0, 1, 't'
+        # self.data  = np.swapaxes(self.data, 2, 4) # 'b, 'c', 't', 1, 0'
+        # self.data  = np.swapaxes(self.data, 3, 4) # 'b, 'c', 't',  0, 1
 
 
         print self.data.shape
@@ -88,6 +95,7 @@ class HMDBfftDataset(dataset.Dataset):
 	    
         # Return a batch ('b', 0, 1, 't','c')
         x[0:batch_size,:,:,:,:] = self.data[firstIdx:lastIdx]
+
         y[0:batch_size,:] = self.labels[firstIdx:lastIdx];
  
         print "Returned a minibatch"
