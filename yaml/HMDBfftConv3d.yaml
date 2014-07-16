@@ -1,6 +1,6 @@
 !obj:pylearn2.train.Train {
     dataset: &train !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
-        data_path: '/data/lisatmp3/ballasn/HMDB/cuboids',
+        data_path: '/state/partition2/ballas_n/HMDB/cuboids',
         split: 1,
         which_set: 'train',
     },
@@ -17,28 +17,28 @@
                      num_pieces: 1,
                      kernel_shape: [2, 2],
                      kernel_sequence_length: 3,
-                     pool_shape: [2, 2],
+                     pool_shape: [1, 1],
                      pool_stride: [1, 1],
-                     sequence_pool_shape: 2,
+                     sequence_pool_shape: 1,
                      irange: .005,
                      max_kernel_norm: .9,
-                 },
-#!obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
-#    layer_name: 'h1',
-#    tied_b: 0,
-#    W_lr_scale: .05,
-#    b_lr_scale: .05,
-#    num_channels: 128,
-#    # MUST BE ONE, not supported in the current code
-#    num_pieces: 1,
-#    kernel_shape: [2, 2],
-#    kernel_sequence_length: 1,
-#    pool_shape: [1, 1],
-#    pool_stride: [1, 1],
-#    sequence_pool_shape: 1,
-#    irange: .005,
-#    max_kernel_norm: .9,
-#},
+                },
+#            !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+#                layer_name: 'h1',
+#                tied_b: 0,
+#                W_lr_scale: .05,
+#                b_lr_scale: .05,
+#                num_channels: 64,
+#                # MUST BE ONE, not supported in the current code
+#                num_pieces: 1,
+#                kernel_shape: [2, 2],
+#                kernel_sequence_length: 3,
+#                pool_shape: [1, 1],
+#                pool_stride: [1, 1],
+#                sequence_pool_shape: 1,
+#                irange: .005,
+#                max_kernel_norm: .9,
+#            },
                  # !obj:pylearn2.models.maxout.Maxout {
                  #    layer_name: 'h1',
                  #    irange: .005,
@@ -56,7 +56,7 @@
         input_space: !obj:pylearn2.space.Conv3DSpace {
             shape: [20, 20, 12],
             num_channels: 33,
-            axes: ['b', 'c', 't', 0, 1],
+            axes: ['b', 0, 1, 't', 'c'],
         },
     },
     algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
@@ -67,15 +67,15 @@
             {
                 'train' : *train,
                 'valid' : !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
-                   data_path: '/data/lisatmp3/ballasn/HMDB/cuboids',
+                   data_path: '/state/partition2/ballas_n/HMDB/cuboids',
                    split: 1,
                    which_set: 'valid',
                 },
-#                'test' : !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
-#                   data_path: '/data/lisatmp3/ballasn/HMDB/cuboids/',
-#                   split: 1,
-#                   which_set: 'test',
-#                },
+                'test' : !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
+                   data_path: '/state/partition2/ballas_n/HMDB/cuboids',
+                   split: 1,
+                   which_set: 'test',
+                },
             },
         cost: !obj:pylearn2.costs.mlp.dropout.Dropout {
             input_include_probs: { 'h0' : .8 },
