@@ -4,6 +4,7 @@ import numpy
 import tables
 import math
 import gzip
+import copy
 
 import numpy as np
 
@@ -16,7 +17,7 @@ def save_npy(filelist, indir, outdir):
 
 
     ### Idx, used to save the index associated with each video in a hdf files
-    nb_cuboids = 3600
+    nb_cuboids = 4800
     nb_channel = 33
     features = np.zeros((len(filelist), nb_cuboids*nb_channel))
     cur = 0
@@ -51,18 +52,35 @@ if __name__ == "__main__":
 
     l = read_list(sys.argv[1])
     labels = np.loadtxt(sys.argv[2])
-    print(labels.shape)
+    print len(l), labels.shape
+
+    assert (len(l) == labels.shape[0])
+
+
+    ### Dbg
+    for i in xrange(0, labels.shape[1]):
+        print i, np.where(labels[:, i] == 1)[0].shape
+    ### End Dbg
+
 
     ## Shuffle example
     idx = np.arange(0, len(l))
     np.random.shuffle(idx)
-    l2 = l
-    lab2 = labels
+    l2 = copy.copy(l)
+    lab2 = np.zeros_like(labels)
     for i in xrange(0, len(l)):
          l2[i]      = l[idx[i]]
          lab2[i, :] = labels[idx[i], :]
     l = l2
     labels = lab2
+
+    print len(l), labels.shape
+    assert len(l) == labels.shape[0]
+
+    ### Dbg
+    for i in xrange(0, labels.shape[1]):
+        print i, np.where(labels[:, i] == 1)[0].shape
+    ### End Dbg
 
 
     ## Save the features
