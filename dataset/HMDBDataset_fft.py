@@ -19,6 +19,61 @@ from pylearn2.space import VectorSpace, CompositeSpace
 
 class HMDBfftDataset(dataset.Dataset):
 
+
+    labels_name =  [
+        "brush_hair",
+        "cartwheel",
+        "catch",
+        "chew",
+        "clap",
+        "climb",
+        "climb_stairs",
+        "dive",
+        "draw_sword",
+        "dribble",
+        "drink",
+        "eat",
+        "fall_floor",
+        "fencing",
+        "flic_flac",
+        "golf",
+        "handstand",
+        "hit",
+        "hug",
+        "jump",
+        "kick",
+        "kick_ball",
+        "kiss",
+        "laugh",
+        "pick",
+        "pour",
+        "pullup",
+        "punch",
+        "push",
+        "pushup",
+        "ride_bike",
+        "ride_horse",
+        "run",
+        "shake_hands",
+        "shoot_ball",
+        "shoot_bow",
+        "shoot_gun",
+        "sit",
+        "situp",
+        "smile",
+        "smoke",
+        "somersault",
+        "stand",
+        "swing_baseball",
+        "sword",
+        "sword_exercise",
+        "talk",
+        "throw",
+        "turn",
+        "walk",
+        "wave"
+    ]
+
     def __init__(self, data_path, split, which_set,
                  batch_size = 64, axes = ('b', 'c', 't', 0, 1, )):
 
@@ -46,16 +101,22 @@ class HMDBfftDataset(dataset.Dataset):
 
         
         print os.path.join(self.data_path, 'features.py.npy')
-        print
+        print os.path.join(self.data_path, 'files_lst.txt')
+        self.read_ids(os.path.join(self.data_path, 'files_lst.txt'))
+
+
         self.data = np.load(os.path.join(self.data_path, 'features.py.npy'))
         self.labels = np.loadtxt(os.path.join(self.data_path, 'labels.txt'))
 
         ### add sample to be divisible by batch_size
+        self.orig_nb_examples = self.data.shape[0]
         self.nb_examples = self.data.shape[0]
         if (self.nb_examples % batch_size != 0):
             to_add = batch_size - self.nb_examples % batch_size
             self.data = np.append(self.data, self.data[0:to_add, :], axis = 0)
             self.labels = np.append(self.labels, self.labels[0:to_add, :], axis = 0)
+            for i in xrange(0, to_add):
+                self.video_ids.append(self.video_ids[i])
 
         # number of videos examples in the dataset
         self.nb_examples = self.data.shape[0]
@@ -85,6 +146,13 @@ class HMDBfftDataset(dataset.Dataset):
         print self.data.shape
 
 
+    def read_ids(self, filename):
+        self.video_ids = []
+        with open(filename) as fp:
+            for line in fp:
+                self.video_ids.append(line.strip())
+
+
 
     def get_minibatch(self, firstIdx, lastIdx, batch_size,
                       data_specs, return_tuple):
@@ -98,13 +166,15 @@ class HMDBfftDataset(dataset.Dataset):
 
         y[0:batch_size,:] = self.labels[firstIdx:lastIdx];
  
-        print "Returned a minibatch"
+        print "Returned a minibatch", firstIdx, lastIdx
         return x, y
                                     
     def iterator(self, mode=None, batch_size=None, num_batches=None, topo=None,
-                 targets=False, data_specs=None, return_tuple=False, rng=None):
+                 targets=False, data_specs=None, return_tuple=False, rng=None,
+                 shuffle_batch=True):
         return HMDBfftIterator(self, batch_size, num_batches, 
-                                     data_specs, return_tuple, rng)
+                               data_specs, return_tuple, rng,
+                               shuffle_batch)
     
     def get_num_examples(self):
         data_num_examples = len(self.labels)
@@ -126,7 +196,8 @@ class HMDBfftIterator:
     stochastic = False
     
     def __init__(self, dataset=None, batch_size=None, num_batches=None,
-                 data_specs=False, return_tuple=False, rng=None):
+                 data_specs=False, return_tuple=False, rng=None,
+                 shuffle_batch=True):
         
         self._dataset = dataset
         self._dataset_size = len(dataset.labels)
@@ -157,7 +228,8 @@ class HMDBfftIterator:
         self._num_batches = int(num_batches)
         self._next_batch_no = 0
         self._batch_order = range(self._num_batches)
-        self._rng.shuffle(self._batch_order)
+        if (shuffle_batch):
+            self._rng.shuffle(self._batch_order)
         self._return_tuple = return_tuple
         self._data_specs = data_specs
         self.num_examples = self._dataset_size 
