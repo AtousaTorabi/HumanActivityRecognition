@@ -122,7 +122,7 @@ class Conv3DB01TC(LinearTransform):
             raise NotImplementedError()
 
         print kernel_stride
-        if kernel_stride != [1, 1, 1]:
+        if kernel_stride != (1, 1, 1):
             raise ValueError("only values of kernel_stride with value of 1 "
                              " are supported currently")
 
@@ -210,7 +210,6 @@ def make_random_conv3D(irange,
                        kernel_stride = (1,1,1), pad=0,
                        message = "", rng = None,
                        partial_sum = None):
-    
     if rng is None:
         rng = make_np_rng(rng, default_seed, which_method='uniform')
 
@@ -244,7 +243,7 @@ def setup_detector_layer_b01tc(layer, input_space, rng, irange):
     layer: Any python object that allows the modifications described below and has
     the following attributes:
          pad: int describing amount of zero padding to add
-         kernel_shape: 2-element tuple or list describing spatial shape of kernel
+         kernel_shape: 3-element tuple or list describing shape of kernel
          fix_kernel_shape: bool, if true, will shrink the kernel shape to make it
          feasible, as needed (useful for hyperparameter searchers)
          detector_channels: The number of channels in the detector layer
@@ -299,17 +298,11 @@ def setup_detector_layer_b01tc(layer, input_space, rng, irange):
     else:
         kernel_stride = [1, 1, 1]
 
-    ### FIXME
-    kernel_stride = [1, 1, 1]
-
-    dummy_shape = [self.input_space.shape[0], self.input_space.shape[1] ]
+    #dummy_shape = [self.input_space.shape[0], self.input_space.shape[1] ]
     output_shape = [int(np.ceil((i_sh + 2. * self.pad - k_sh) / float(k_st))) + 1
-                        for i_sh, k_sh, k_st in zip(dummy_shape,
-                                                    self.kernel_shape,
-                                                    kernel_stride)]
-    output_sequence_length = self.input_space.shape[2] - self.kernel_sequence_length + 1
-    if output_sequence_length < 0:
-        raise ValueError("Input sequence length ({}) should >= output sequence_length ({})".format(self.input_space.sequence_length, self.kernel_sequence_length))
+                    for i_sh, k_sh, k_st in zip(self.input_space.shape,
+                                                self.kernel_shape,
+                                                kernel_stride)]
 
     def handle_kernel_shape(idx):
         if self.kernel_shape[idx] < 1:
@@ -322,11 +315,9 @@ def setup_detector_layer_b01tc(layer, input_space, rng, irange):
                 warnings.warn("Had to change the kernel shape to make network feasible")
             else:
                 raise ValueError("kernel too big for input (even with zero padding)")
-
-    map(handle_kernel_shape, [0, 1])
+    map(handle_kernel_shape, [0, 1, 2])
 
     # space required for 3dconv
-    output_shape = [output_shape[0], output_shape[1], output_sequence_length]
     self.detector_space = Conv3DSpace(shape=output_shape,
                                       num_channels = self.detector_channels,
                                       axes = ('b', 0, 1, 't', 'c'))
@@ -335,22 +326,21 @@ def setup_detector_layer_b01tc(layer, input_space, rng, irange):
         partial_sum = self.partial_sum
     else:
         partial_sum = 1
-    # filter shape required for fft-3dconv ('c_detector','c','t','0','1')
+    # filter shape required for fft3dconv ('c_detector','c','t','0','1')
     filter_shape = (self.detector_space.num_channels,
                     self.kernel_shape[0],
                     self.kernel_shape[1],
-                    self.kernel_sequence_length,
+                    self.kernel_shape[2],
                     self.input_space.num_channels,
                    )
+
     # filter shape required for fft-3dconv ('b','c','t','0','1')
     signal_shape = (self.mlp.batch_size,
                     self.input_space.shape[0],
                     self.input_space.shape[1],
-                    self.input_space.sequence_length,
+                    self.input_space.shape[2],
                     self.input_space.num_channels,
                     )
-
-
 
     self.transformer = make_random_conv3D(
         irange = self.irange,
