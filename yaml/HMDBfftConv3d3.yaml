@@ -1,0 +1,121 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
+        data_path: '/data/lisatmp3/ballasn/HMDB/cuboids/',
+        split: 1,
+        which_set: 'train',
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: 32,
+        layers: [
+                 !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+                     layer_name: 'h0',
+                     num_channels: 64,
+                     # MUST BE ONE, not supported in the current code
+                     num_pieces: 1,
+                     kernel_shape: [3, 3, 3],
+                     pool_shape: [2, 2, 3],
+                     pool_stride: [1, 1, 1],
+                     irange: .005,
+                     max_kernel_norm: .9,
+                },
+                !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+                      layer_name: 'h1',
+                      num_channels: 64,
+                      # MUST BE ONE, not supported in the current code
+                      num_pieces: 1,
+                      kernel_shape: [3, 3, 3],
+                      pool_shape: [1, 1, 1],
+                      pool_stride: [1, 1, 1],
+                      irange: .005,
+                      max_kernel_norm: .9,
+                 },
+                !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+                      layer_name: 'h2',
+                      num_channels: 64,
+                      # MUST BE ONE, not supported in the current code
+                      num_pieces: 1,
+                      kernel_shape: [3, 3, 3],
+                      pool_shape: [2, 2, 3],
+                      pool_stride: [1, 1, 1],
+                      irange: .005,
+                      max_kernel_norm: .9,
+                 },
+                # !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+                #       layer_name: 'h2',
+                #       num_channels: 64,
+                #       # MUST BE ONE, not supported in the current code
+                #       num_pieces: 1,
+                #       kernel_shape: [4, 4, 1],
+                #       pool_shape: [2, 2, 2],
+                #       pool_stride: [1, 1, 1],
+                #       irange: .005,
+                #       max_kernel_norm: .9,
+                #  },
+             !obj:pylearn2.models.maxout.Maxout {
+                      layer_name: 'h3',
+                      irange: .005,
+                      num_units: 8072,
+                      num_pieces: 1,
+                      max_col_norm: 1.9
+                  },
+                 !obj:pylearn2.models.mlp.Softmax {
+                     max_col_norm: 1.9365,
+                     layer_name: 'y',
+                     n_classes: 51,
+                     irange: .005
+                 }
+                ],
+        input_space: !obj:pylearn2.space.Conv3DSpace {
+            shape: [20, 20, 12],
+            num_channels: 33,
+            axes: ['b', 0, 1, 't', 'c'],
+        },
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        learning_rate: .01,
+        train_iteration_mode: 'even_sequential',
+        init_momentum: .9,
+        monitoring_dataset:
+            {
+                'train' : *train,
+                  'valid' : !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
+                    data_path: '/data/lisatmp3/ballasn/HMDB/cuboids/',
+                    split: 1,
+                    which_set: 'valid',
+                 },
+                 'test' : !obj:HumanActivityRecognition.dataset.HMDBDataset_fft.HMDBfftDataset {
+                    data_path: '/data/lisatmp3/ballasn/HMDB/cuboids/',
+                    split: 1,
+                    which_set: 'test',
+                 },
+            },
+        cost: !obj:pylearn2.costs.mlp.dropout.Dropout {
+            input_include_probs: { 'h0' : 1., 'h1' : 1., 'h3': 0.5, 'y': 1.},
+            input_scales: { 'h0' : 1., 'h1' : 1., 'h3': 1., 'y': 1.}
+        },
+        termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+            channel_name: "valid_y_misclass",
+            prop_decrease: 0.,
+            N: 1000
+        },
+        #termination_criterion: !obj:pylearn2.termination_criteria.EpochCounter {max_epochs: 1}
+    },
+#extensions: [
+#    !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+#         channel_name: 'valid_y_misclass',
+#         save_path: "/data/lisatmp3/ballasn/HMDB/cuboids/3layer_128d_best_model.pkl"
+#    },
+#    !obj:pylearn2.training_algorithms.sgd.MomentumAdjustor {
+#        start: 1,
+#        saturate: 250,
+#        final_momentum: .6
+#    },
+#    !obj:pylearn2.training_algorithms.sgd.LinearDecayOverEpoch {
+#        start: 1,
+#        saturate: 250,
+#        decay_factor: .01
+#    }
+#],
+    save_path: "/data/lisatmp3/ballasn/HMDB/cuboids/2conv_max_128.pkl",
+    save_freq: 10
+}
