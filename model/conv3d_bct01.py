@@ -32,7 +32,8 @@ from pylearn2.utils.rng import make_np_rng
 from pylearn2.linear.conv2d import default_seed, default_sparse_seed
 from pylearn2.linear.linear_transform import LinearTransform
 from pylearn2.sandbox.cuda_convnet import check_cuda
-from pylearn2.space import Conv3DSpace
+
+from HumanActivityRecognition.space import Conv3DSpace
 
 
 from theano.tensor.nnet.Conv3D import Conv3D

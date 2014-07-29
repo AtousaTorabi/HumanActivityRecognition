@@ -28,13 +28,15 @@ from pylearn2.utils import sharedX
 
 from pylearn2.space import CompositeSpace
 from pylearn2.space import Space
-from pylearn2.space import VectorSpace , Conv2DSpace, Conv3DSpace
+from pylearn2.space import VectorSpace, Conv2DSpace
 from pylearn2.utils import function
 from pylearn2.utils import py_integer_types
 
 from pylearn2.utils import sharedX
 
 # setup detector layer for fft 3d convolution with axes bct01
+from HumanActivityRecognition.space import Conv3DSpace
+
 from HumanActivityRecognition.model.conv3d_bct01 import setup_detector_layer_bct01
 from HumanActivityRecognition.linear.conv3d_b01tc import setup_detector_layer_b01tc
 if cuda.cuda_available:
