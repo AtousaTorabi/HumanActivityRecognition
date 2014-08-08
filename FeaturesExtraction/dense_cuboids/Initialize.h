@@ -30,7 +30,9 @@ void ReleDescMat(DescMat* descMat)
 	free(descMat);
 }
 
-void InitDescInfo(DescInfo* descInfo, int nBins, bool isHof, int size, int nxy_cell, int nt_cell)
+void InitDescInfo(DescInfo* descInfo, int nBins, bool isHof,
+                  int patch_size_x, int patch_size_y,
+                  int nxy_cell, int nt_cell)
 {
 	descInfo->nBins = nBins;
 	descInfo->isHof = isHof;
@@ -38,8 +40,8 @@ void InitDescInfo(DescInfo* descInfo, int nBins, bool isHof, int size, int nxy_c
 	descInfo->nyCells = nxy_cell;
 	descInfo->ntCells = nt_cell;
 	descInfo->dim = nBins*nxy_cell*nxy_cell;
-	descInfo->height = size;
-	descInfo->width = size;
+	descInfo->height = patch_size_x;
+	descInfo->width = patch_size_y;
 }
 
 void InitSeqInfo(SeqInfo* seqInfo, char* video)
@@ -85,6 +87,8 @@ void usage()
 	fprintf(stderr, "  -A [scale number]         The number of maximal spatial scales (default: 8 scales)\n");
 	fprintf(stderr, "  -I [initial gap]          The gap for re-sampling feature points (default: 1 frame)\n");
 	fprintf(stderr, "  -H [human bounding box]   The human bounding box file to remove outlier matches (default: None)\n");
+	fprintf(stderr, "  -c [bool]   Enable random cropping (default: 0)\n");
+	fprintf(stderr, "  -f [bool]   Enable random flipping (default: 0)\n");
 }
 
 bool arg_parse(int argc, char** argv)
@@ -92,7 +96,7 @@ bool arg_parse(int argc, char** argv)
 	int c;
 	bool flag = false;
 	char* executable = basename(argv[0]);
-	while((c = getopt (argc, argv, "hS:E:L:W:N:s:t:A:I:H:")) != -1)
+	while((c = getopt (argc, argv, "hS:E:L:W:N:s:t:A:I:H:c:f:")) != -1)
 	switch(c) {
 		case 'S':
 		start_frame = atoi(optarg);
@@ -109,7 +113,8 @@ bool arg_parse(int argc, char** argv)
 		min_distance = atoi(optarg);
 		break;
 		case 'N':
-		patch_size = atoi(optarg);
+                  patch_size_x = atoi(optarg);
+                  patch_size_y = patch_size_x;
 		break;
 		case 's':
 		nxy_cell = atoi(optarg);
@@ -122,10 +127,17 @@ bool arg_parse(int argc, char** argv)
 		break;
 		case 'I':
 		init_gap = atoi(optarg);
-		break;	
+		break;
 		case 'H':
 		bb_file = optarg;
 		break;
+                case 'c':
+                do_random_crop = atoi(optarg);
+                std::cout << do_random_crop << std::endl;
+                break;
+                case 'f':
+                do_flip = atoi(optarg);
+                break;
 		case 'h':
 		usage();
 		exit(0);

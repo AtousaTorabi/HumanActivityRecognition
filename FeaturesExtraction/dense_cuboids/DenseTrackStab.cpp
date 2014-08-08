@@ -3,14 +3,59 @@
 #include "Descriptors.h"
 #include "OpticalFlow.h"
 
+
+#include <cstdlib>
 #include <time.h>
 
 using namespace cv;
 
 int show_track = 0; // set show_track = 1, if you want to visualize the trajectories
 
+
+int rand_lim(int limit)
+ {
+  /* return a random number between 0 and limit inclusive.
+   */
+
+  int divisor = RAND_MAX / (limit+1);
+  int retval;
+
+  do
+    retval = rand() / divisor;
+  while (retval > limit);
+
+  return retval;
+}
+
+
+unsigned get_nb_frames(const std::string& videoname)
+{
+  VideoCapture capture;
+
+  capture.open(videoname.c_str());
+  if(!capture.isOpened())
+  {
+    fprintf(stderr, "Could not initialize capturing..\n");
+    return -1;
+  }
+
+  unsigned nb_frame = 0;
+  while(true)
+  {
+    Mat frame;
+    capture >> frame;
+    if (frame.empty())
+      break;
+    ++nb_frame;
+  }
+  return nb_frame;
+
+}
+
 int main(int argc, char** argv)
 {
+  srand(time(NULL));
+
   VideoCapture capture;
   char* video = argv[1];
   int flag = arg_parse(argc, argv);
@@ -27,9 +72,9 @@ int main(int argc, char** argv)
   DescInfo hogInfo, hofInfo, mbhInfo;
 
   InitTrackInfo(&trackInfo, track_length, init_gap);
-  InitDescInfo(&hogInfo, 8, false, patch_size, nxy_cell, nt_cell);
-  InitDescInfo(&hofInfo, 9, true, patch_size, nxy_cell, nt_cell);
-  InitDescInfo(&mbhInfo, 8, false, patch_size, nxy_cell, nt_cell);
+  InitDescInfo(&hogInfo, 8, false, patch_size_x, patch_size_y, nxy_cell, nt_cell);
+  InitDescInfo(&hofInfo, 9, true, patch_size_x, patch_size_y, nxy_cell, nt_cell);
+  InitDescInfo(&mbhInfo, 8, false, patch_size_x, patch_size_y, nxy_cell, nt_cell);
 
   SeqInfo seqInfo;
   InitSeqInfo(&seqInfo, video);
@@ -48,6 +93,21 @@ int main(int argc, char** argv)
 
   if(show_track == 1)
     namedWindow("DenseTrackStab", 0);
+
+  // Select start and end frame
+  if (do_random_crop)
+  {
+    int max_frame = get_nb_frames(video);
+    if (max_frame > 61)
+    {
+      unsigned rmax = RAND_MAX;
+      ++rmax;
+      std::cout << rmax << std::endl;
+      end_frame = ((double) rand() / (rmax)) * (max_frame-61+1) + 61;
+      start_frame = end_frame - 61;
+      std::cout << start_frame << ", " << end_frame << std::endl;
+    }
+  }
 
   SurfFeatureDetector detector_surf(200);
   SurfDescriptorExtractor extractor_surf(true, true);
@@ -85,6 +145,11 @@ int main(int argc, char** argv)
     {
       // Bilinear interpolation
       cv::resize(tmp_frame, frame, Size(320, 240));
+    }
+    if (do_flip)
+    {
+      tmp_frame = frame;
+      cv::flip(tmp_frame, frame, 1);
     }
 
     if(frame_num < start_frame)
@@ -128,7 +193,8 @@ int main(int argc, char** argv)
         // dense sampling feature points
         std::vector<Point2f> points(0);
         // DenseSample(prev_grey_pyr[iScale], points, quality, min_distance);
-        DenseSampleCuboids(prev_grey_pyr[iScale], points, cuboids_stride);
+        DenseSampleCuboids(prev_grey_pyr[iScale], points,
+                           cuboids_stride_x, cuboids_stride_y);
 
         //std::cerr << "Point:" << points.size() << std::endl;
 
@@ -300,7 +366,8 @@ int main(int argc, char** argv)
         points.push_back(iTrack->point[iTrack->index]);
 
       //DenseSample(grey_pyr[iScale], points, quality, min_distance);
-      DenseSampleCuboids(prev_grey_pyr[iScale], points, cuboids_stride);
+      DenseSampleCuboids(prev_grey_pyr[iScale], points,
+                         cuboids_stride_x, cuboids_stride_y);
       //std::cerr << "Point:" << points.size() << std::endl;
 
       // save the new feature points

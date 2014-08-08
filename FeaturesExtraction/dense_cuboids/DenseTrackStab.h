@@ -33,9 +33,12 @@ int scale_num = 1;
 const float scale_stride = sqrt(2);
 char* bb_file = NULL;
 bool do_resize = true; // resize all the input to 320x240 (HMDB main format)
+bool do_flip = false;
+bool do_random_crop = false;
 
 // parameters for descriptors
-int patch_size = 16;
+int patch_size_x = 16;
+int patch_size_y = 12;
 int nxy_cell = 1;
 int nt_cell = 1;
 float epsilon = 0.05;
@@ -44,7 +47,8 @@ const float min_flow = 0.4;
 // parameters for tracking
 double quality = 0.001;
 int min_distance = 5;
-int cuboids_stride = 16; // Equivalent to min_distance for cuboids sampling
+int cuboids_stride_x = 16; // Equivalent to min_distance for cuboids sampling
+int cuboids_stride_y = 12; // Equivalent to min_distance for cuboids sampling
 int init_gap = 1;
 int track_length = 5; // We consider only cuboids
 
