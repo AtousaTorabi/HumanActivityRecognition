@@ -1,0 +1,133 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:HumanActivityRecognition.dataset.UCF101Dataset_fft3.UCF101Dataset {
+        data_path: '/data/lisatmp3/torabi/UCF101/t5',
+        split: 1,
+        num_split: 2,
+        which_set: 'train',
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: 64,
+        layers: [
+                 !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+                     layer_name: 'h0',
+                     tied_b: 0,
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     num_channels: 128,
+                     # MUST BE ONE, not supported in the current code
+                     num_pieces: 1,
+                     kernel_shape: [2, 2, 3],
+                     pool_shape: [2, 2],
+                     pool_stride: [1, 1],
+                     pool_temporal_shape: [1, 3],
+                     pool_temporal_stride: [1, 1],
+                     irange: .005,
+                     max_kernel_norm: .9,
+                 },
+                 !obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+                     layer_name: 'h1',
+                     tied_b: 0,
+                     W_lr_scale: .05,
+                     b_lr_scale: .05,
+                     num_channels: 128,
+                     # MUST BE ONE, not supported in the current code
+                     num_pieces: 1,
+                     kernel_shape: [2, 2, 3],
+                     pool_shape: [2, 2],
+                     pool_stride: [1, 1],
+                     pool_temporal_shape: [1, 3],
+                     pool_temporal_stride: [1, 1],
+                     irange: .005,
+                     max_kernel_norm: .9,
+                 },
+                 #!obj:HumanActivityRecognition.model.fft3dConvReLU.fft3dConvReLUPool {
+                 #    layer_name: 'h2',
+                 #    tied_b: 0,
+                 #    W_lr_scale: .05,
+                 #    b_lr_scale: .05,
+                 #    num_channels: 64,
+                 #    # MUST BE ONE, not supported in the current code
+                 #    num_pieces: 1,
+                 #    kernel_shape: [2, 2, 3],
+                 #    pool_shape: [2, 2],
+                 #    pool_stride: [1, 1],
+                 #    pool_temporal_shape: [1, 3],
+                 #    pool_temporal_stride: [1, 1],
+                 #    irange: .005,
+                 #    max_kernel_norm: .9,
+                 #},
+                 #!obj:pylearn2.models.maxout.Maxout {
+                 #     layer_name: 'h3',
+                 #     irange: .005,
+                 #     num_units: 240,
+                 #     num_pieces: 5,
+                 #     max_col_norm: 1.9
+                 #},
+                  !obj:pylearn2.models.mlp.RectifiedLinear {
+                      layer_name: 'h3',
+                      dim: 400,
+                      irange: .05,
+                     #max_col_norm: 2.
+                 },
+                 !obj:pylearn2.models.mlp.Softmax {
+                #     max_col_norm: 1.9365,
+                     layer_name: 'y',
+                     n_classes: 101,
+                     irange: .005
+                 }
+                ],
+        input_space: !obj:pylearn2.space.Conv3DSpace {
+            shape: [20, 20, 12],
+            num_channels: 33,
+            axes: ['b', 0, 1, 't', 'c'],
+        },
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        learning_rate: .01,
+        train_iteration_mode: 'even_sequential',
+        init_momentum: .8,
+        monitoring_dataset:
+            {
+                 'train' : *train,
+                 #'valid' : !obj:HumanActivityRecognition.dataset.UCF101Dataset_fft3.UCF101Dataset {
+                 #   data_path: '/data/lisatmp3/torabi/UCF101/t5',
+                 #   split: 1,
+                 #   which_set: 'valid',
+                 #},
+                 'test' : !obj:HumanActivityRecognition.dataset.UCF101Dataset_fft3.UCF101Dataset {
+                    data_path: '/data/lisatmp3/torabi/UCF101/t5',
+                    split: 1,
+                    num_split: 1,
+                    which_set: 'test',
+                 },
+            },
+        cost: !obj:pylearn2.costs.mlp.dropout.Dropout {
+            input_include_probs: { 'h0' : 1., 'h1': 1.,'h3': .5, 'y': .5},
+            input_scales: { 'h0': 1., 'h1': 1.,'h3': 2., 'y': 2.}
+        },
+        termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+            channel_name: "test_y_misclass",
+            prop_decrease: 0.,
+            N: 1000
+        },
+        #termination_criterion: !obj:pylearn2.termination_criteria.EpochCounter {max_epochs: 1}
+    },
+    extensions: [
+        !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+             channel_name: 'test_y_misclass',
+             save_path: "/data/lisatmp3/torabi/UCF101/conv3Dresults/2layer_best_model9.pkl"
+        },
+#       !obj:pylearn2.training_algorithms.sgd.MomentumAdjustor {
+#            start: 1,
+#            saturate: 250,
+#            final_momentum: .6
+#        },
+#        !obj:pylearn2.training_algorithms.sgd.LinearDecayOverEpoch {
+#            start: 1,
+#            saturate: 250,
+#            decay_factor: .01
+#        }
+    ],
+    save_path: "/data/lisatmp3/torabi/UCF101/conv3Dresults/2layer_latest_model9.pkl",
+    save_freq: 10
+}
