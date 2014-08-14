@@ -10,7 +10,7 @@ Multilayer Perceptron
 import math
 import sys
 import warnings
-from functools import wraps
+import functools
 
 
 import numpy as np
@@ -138,6 +138,9 @@ class fft3dConvReLUPool(Layer):
                     output: the output of the layer, after sptial pooling, can be normalized as well
             kernel_stride: vertical,  horizontal and time pixel stride between each detector.
         """
+
+        super(fft3dConvReLUPool, self).__init__()
+
         check_cuda(str(type(self)))
 
         detector_channels = num_channels * num_pieces
@@ -145,7 +148,7 @@ class fft3dConvReLUPool(Layer):
         self.__dict__.update(locals())
         del self.self
 
-    @wraps(Layer.get_lr_scalers)
+    @functools.wraps(Layer.get_lr_scalers)
     def get_lr_scalers(self):
 
         if not hasattr(self, 'W_lr_scale'):
@@ -165,7 +168,7 @@ class fft3dConvReLUPool(Layer):
 
         return rval
 
-    @wraps(Layer.set_input_space)
+    @functools.wraps(Layer.set_input_space)
     def set_input_space(self, space):
         """ Note: this resets parameters! """
 
@@ -245,8 +248,8 @@ class fft3dConvReLUPool(Layer):
         print "Output space: ", self.output_space.shape
 
 
-    @wraps(Layer.censor_updates)
-    def censor_updates(self, updates):
+    @functools.wraps(Layer._modify_updates)
+    def _modify_updates(self, updates):
         """
         .. todo::
 
@@ -262,7 +265,7 @@ class fft3dConvReLUPool(Layer):
                 scales = desired_norms / (1e-7 + row_norms)
                 updates[W] = updated_W #* scales.dimshuffle(0, 'x')
 
-    @wraps(Layer.get_params)
+    @functools.wraps(Layer.get_params)
     def get_params(self):
         """
         .. todo::
@@ -279,7 +282,7 @@ class fft3dConvReLUPool(Layer):
         rval.append(self.b)
         return rval
 
-    @wraps(Layer.get_weight_decay)
+    @functools.wraps(Layer.get_weight_decay)
     def get_weight_decay(self, coeff):
 
         if isinstance(coeff, str):
@@ -288,7 +291,7 @@ class fft3dConvReLUPool(Layer):
         W, = self.transformer.get_params()
         return coeff * T.sqr(W).sum()
 
-    @wraps(Layer.get_l1_weight_decay)
+    @functools.wraps(Layer.get_l1_weight_decay)
     def get_l1_weight_decay(self, coeff):
 
         if isinstance(coeff, str):
@@ -297,28 +300,28 @@ class fft3dConvReLUPool(Layer):
         W, = self.transformer.get_params()
         return coeff * abs(W).sum()
 
-    @wraps(Layer.set_weights)
+    @functools.wraps(Layer.set_weights)
     def set_weights(self, weights):
 
         W, = self.transformer.get_params()
         W.set_value(weights)
 
-    @wraps(Layer.set_biases)
+    @functools.wraps(Layer.set_biases)
     def set_biases(self, biases):
 
         self.b.set_value(biases)
 
-    @wraps(Layer.get_biases)
+    @functools.wraps(Layer.get_biases)
     def get_biases(self):
 
         return self.b.get_value()
 
-    @wraps(Layer.get_weights_format)
+    @functools.wraps(Layer.get_weights_format)
     def get_weights_format(self):
 
         return ('v', 'h')
 
-    @wraps(Layer.get_weights_topo)
+    @functools.wraps(Layer.get_weights_topo)
     def get_weights_topo(self):
 
         outp, inp, rows, cols = range(4)
@@ -326,21 +329,68 @@ class fft3dConvReLUPool(Layer):
 
         return np.transpose(raw, (outp, rows, cols, inp))
 
-    @wraps(Layer.get_monitoring_channels)
-    def get_monitoring_channels(self):
-
+    @functools.wraps(Layer.get_layer_monitoring_channels)
+    def get_layer_monitoring_channels(self, state_below=None,
+                                      state=None, targets=None):
         W, = self.transformer.get_params()
+
+
         assert W.ndim == 5
+
         sq_W = T.sqr(W)
 
-        row_norms = T.sqrt(sq_W.sum(axis=(0,1,2)))
+        row_norms = T.sqrt(sq_W.sum(axis=(1, 2, 3, 4)))
 
-        return OrderedDict([('kernel_norms_min',  row_norms.min()),
+        rval = OrderedDict([('kernel_norms_min',  row_norms.min()),
                             ('kernel_norms_mean', row_norms.mean()),
                             ('kernel_norms_max',  row_norms.max()), ])
 
+        if (state is not None) or (state_below is not None):
+            if state is None:
+                state = self.fprop(state_below)
 
-    @wraps(Layer.fprop)
+            P = state
+
+            vars_and_prefixes = [(P, '')]
+
+            for var, prefix in vars_and_prefixes:
+                assert var.ndim == 5
+                v_max = var.max(axis=(1, 2, 3, 4))
+                v_min = var.min(axis=(1, 2, 3, 4))
+                v_mean = var.mean(axis=(1, 2, 3, 4))
+                v_range = v_max - v_min
+
+                # max_x.mean_u is "the mean over *u*nits of the max over
+                # e*x*amples" The x and u are included in the name because
+                # otherwise its hard to remember which axis is which when
+                # reading the monitor I use inner.outer rather than
+                # outer_of_inner or something like that because I want
+                # mean_x.* to appear next to each other in the
+                # alphabetical list, as these are commonly plotted
+                # together
+                for key, val in [('max_x.max_u',    v_max.max()),
+                                 ('max_x.mean_u',   v_max.mean()),
+                                 ('max_x.min_u',    v_max.min()),
+                                 ('min_x.max_u',    v_min.max()),
+                                 ('min_x.mean_u',   v_min.mean()),
+                                 ('min_x.min_u',    v_min.min()),
+                                 ('range_x.max_u',  v_range.max()),
+                                 ('range_x.mean_u', v_range.mean()),
+                                 ('range_x.min_u',  v_range.min()),
+                                 ('mean_x.max_u',   v_mean.max()),
+                                 ('mean_x.mean_u',  v_mean.mean()),
+                                 ('mean_x.min_u',   v_mean.min())]:
+                    rval[prefix+key] = val
+
+        return rval
+
+    @functools.wraps(Layer.get_monitoring_channels_from_state)
+    def get_monitoring_channels_from_state(self, state, target=None):
+        return self.get_monitoring_channels_from_state()
+
+
+
+    @functools.wraps(Layer.fprop)
     def fprop(self, state_below):
 
         check_cuda(str(type(self)))
