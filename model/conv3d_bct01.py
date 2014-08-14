@@ -40,7 +40,7 @@ from theano.tensor.nnet.Conv3D import Conv3D
 
 
 # FFT-based convolution implementation
-import HumanActivityRecognition.linear.conv3d.fftconv_op as conv
+# import HumanActivityRecognition.linear.conv3d.fftconv_op as conv
 
 
 class Conv3DBCT01(LinearTransform):
