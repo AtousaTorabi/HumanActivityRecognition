@@ -1,3 +1,4 @@
+
 import os
 import math
 import warnings
@@ -26,8 +27,8 @@ class HMDBfftDataset(dataset.Dataset):
         "catch",
         "chew",
         "clap",
-        "climb",
         "climb_stairs",
+        "climb",
         "dive",
         "draw_sword",
         "dribble",
@@ -41,8 +42,8 @@ class HMDBfftDataset(dataset.Dataset):
         "hit",
         "hug",
         "jump",
-        "kick",
         "kick_ball",
+        "kick",
         "kiss",
         "laugh",
         "pick",
@@ -65,8 +66,8 @@ class HMDBfftDataset(dataset.Dataset):
         "somersault",
         "stand",
         "swing_baseball",
-        "sword",
         "sword_exercise",
+        "sword",
         "talk",
         "throw",
         "turn",
@@ -84,7 +85,7 @@ class HMDBfftDataset(dataset.Dataset):
         self.nb_y = 20
         self.nb_t = 12
         self.vidShape = [self.nb_x, self.nb_y, self.nb_t, self.nb_feats]
-        #vidSize ('c' x 't' x 0 x 1) 
+        #vidSize ('c' x 't' x 0 x 1)
         self.vidSize = self.vidShape[0] * self.vidShape[1] * \
                        self.vidShape[2] * self.vidShape[3]
         self.mapper = {'train': 0, 'valid': 1, 'test': 2}
@@ -99,7 +100,7 @@ class HMDBfftDataset(dataset.Dataset):
         else: # test
            self.data_path = data_path + '/%s_2/' % split
 
-        
+
         print os.path.join(self.data_path, 'features.py.npy')
         print os.path.join(self.data_path, 'files_lst.txt')
         self.read_ids(os.path.join(self.data_path, 'files_lst.txt'))
@@ -127,21 +128,13 @@ class HMDBfftDataset(dataset.Dataset):
         print self.data.shape[0], self.nb_x, self.nb_y, self.nb_t, self.nb_feats
         self.data = self.data.reshape(self.data.shape[0],
                                       self.nb_t,
-                                      self.nb_x, 
+                                      self.nb_x,
                                       self.nb_y,
                                       self.nb_feats)
 
-        ## Transform 'b', 't', 0, 1, 'c'  to  'b', 0, 1, 't', 'c' 
+        ## Transform 'b', 't', 0, 1, 'c'  to  'b', 0, 1, 't', 'c'
         self.data  = np.swapaxes(self.data, 1, 2) # 'b, 0, 't', 1, 'c'
         self.data  = np.swapaxes(self.data, 2, 3) # 'b, 0, 1, 't', 'c'
-
-
-
-        # ## Transform 'b', 't, 0, 1, 'c'  to  'b', 'c', 't', 0, 1 
-        # self.data  = np.swapaxes(self.data, 1, 4) # 'b, 'c', 0, 1, 't'
-        # self.data  = np.swapaxes(self.data, 2, 4) # 'b, 'c', 't', 1, 0'
-        # self.data  = np.swapaxes(self.data, 3, 4) # 'b, 'c', 't',  0, 1
-
 
         print self.data.shape
 
@@ -156,26 +149,26 @@ class HMDBfftDataset(dataset.Dataset):
 
     def get_minibatch(self, firstIdx, lastIdx, batch_size,
                       data_specs, return_tuple):
-        
+
         x = np.zeros([lastIdx-firstIdx,] + self.vidShape , dtype="float32")
         y = np.zeros([lastIdx-firstIdx, self.nbTags],  dtype="float32")
-     
-	    
+
+
         # Return a batch ('b', 0, 1, 't','c')
         x[0:batch_size,:,:,:,:] = self.data[firstIdx:lastIdx]
 
         y[0:batch_size,:] = self.labels[firstIdx:lastIdx];
- 
+
         print "Returned a minibatch", firstIdx, lastIdx
         return x, y
-                                    
+
     def iterator(self, mode=None, batch_size=None, num_batches=None, topo=None,
                  targets=False, data_specs=None, return_tuple=False, rng=None,
                  shuffle_batch=True):
-        return HMDBfftIterator(self, batch_size, num_batches, 
+        return HMDBfftIterator(self, batch_size, num_batches,
                                data_specs, return_tuple, rng,
                                shuffle_batch)
-    
+
     def get_num_examples(self):
         data_num_examples = len(self.labels)
         return data_num_examples
@@ -183,7 +176,7 @@ class HMDBfftDataset(dataset.Dataset):
         return True
     def get_design_matrix(self, topo=None):
         return self.data
-        
+
     def get_topo_batch_axis(self):
         """
         Returns the index of the axis that corresponds to different examples
@@ -192,13 +185,13 @@ class HMDBfftDataset(dataset.Dataset):
         return self.axes.index('b')
 
 class HMDBfftIterator:
-    
+
     stochastic = False
-    
+
     def __init__(self, dataset=None, batch_size=None, num_batches=None,
                  data_specs=False, return_tuple=False, rng=None,
                  shuffle_batch=True):
-        
+
         self._dataset = dataset
         self._dataset_size = len(dataset.labels)
 
@@ -232,12 +225,12 @@ class HMDBfftIterator:
             self._rng.shuffle(self._batch_order)
         self._return_tuple = return_tuple
         self._data_specs = data_specs
-        self.num_examples = self._dataset_size 
+        self.num_examples = self._dataset_size
         print self.num_examples
-        
+
     def __iter__(self):
         return self
-        
+
     def next(self):
         if self._next_batch_no >= self._num_batches:
             print self.num_examples
@@ -256,6 +249,6 @@ class HMDBfftIterator:
                                                 self._return_tuple)
             self._next_batch_no += 1
             return data
-            
-        
-    
+
+
+
