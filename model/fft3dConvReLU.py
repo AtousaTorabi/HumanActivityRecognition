@@ -270,7 +270,7 @@ class fft3dConvReLUPool(Layer):
                 row_norms = T.sqrt(T.sum(T.sqr(updated_W), axis=(1, 2, 3, 4)))
                 desired_norms = T.clip(row_norms, 0, self.max_kernel_norm)
                 scales = desired_norms / (1e-7 + row_norms)
-                updates[W] = (updated_W * scales.dimshuffle('x', 'x', 'x', 0))
+                updates[W] = (updated_W * scales.dimshuffle(0, 'x', 'x', 'x', 'x'))
 
     @functools.wraps(Layer.get_params)
     def get_params(self):
