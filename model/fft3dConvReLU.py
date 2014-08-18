@@ -248,22 +248,29 @@ class fft3dConvReLUPool(Layer):
         print "Output space: ", self.output_space.shape
 
 
-    @functools.wraps(Layer._modify_updates)
     def _modify_updates(self, updates):
         """
-        .. todo::
+        Replaces the values in `updates` if needed to enforce the options set
+        in the __init__ method, including `mask_weights` and `max_col_norm`.
 
-            WRITEME
+        Parameters
+        ----------
+        updates : OrderedDict
+            A dictionary mapping parameters (including parameters not
+            belonging to this model) to updated values of those parameters.
+            The dictionary passed in contains the updates proposed by the
+            learning algorithm. This function modifies the dictionary
+            directly. The modified version will be compiled and executed
+            by the learning algorithm.
         """
-
         if self.max_kernel_norm is not None:
             W, = self.transformer.get_params()
             if W in updates:
                 updated_W = updates[W]
-                row_norms = T.sqrt(T.sum(T.sqr(updated_W), axis=(1)))
+                row_norms = T.sqrt(T.sum(T.sqr(updated_W), axis=(1, 2, 3, 4)))
                 desired_norms = T.clip(row_norms, 0, self.max_kernel_norm)
                 scales = desired_norms / (1e-7 + row_norms)
-                updates[W] = updated_W #* scales.dimshuffle(0, 'x')
+                updates[W] = (updated_W * scales.dimshuffle('x', 'x', 'x', 0))
 
     @functools.wraps(Layer.get_params)
     def get_params(self):
