@@ -76,7 +76,7 @@
                      irange: .005
                  }
                 ],
-        input_space: !obj:pylearn2.space.Conv3DSpace {
+        input_space: !obj:HumanActivityRecognition.space.Conv3DSpace {
             shape: [20, 20, 12],
             num_channels: 33,
             axes: ['b', 0, 1, 't', 'c'],

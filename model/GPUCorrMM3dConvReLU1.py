@@ -36,9 +36,9 @@ from pylearn2.utils import py_integer_types
 from pylearn2.utils import sharedX
 
 # setup detector layer for fft 3d convolution with axes bct01
-#from HumanActivityRecognition.model.conv3d_bct01 import setup_detector_layer_bct01
+from HumanActivityRecognition.model.conv3d_btc01new import setup_detector_layer_b01tc
 #from HumanActivityRecognition.linear.conv3d_b01tc import setup_detector_layer_b01tc
-from HumanActivityRecognition.linear.conv3d_b01tc import setup_detector_layer_btc01
+#from HumanActivityRecognition.linear.conv3d_btc01 import setup_detector_layer_b01tc
 if cuda.cuda_available:
     from pylearn2.sandbox.cuda_convnet.pool import max_pool_c01b
 # used for temporal pooling with overlap
@@ -69,6 +69,7 @@ class fft3dConvReLUPool(Layer):
                  num_channels,
                  num_pieces,
                  kernel_shape,
+                 kernel_stride,
                  pool_shape,
                  pool_stride,
                  pool_temporal_shape,
@@ -89,7 +90,7 @@ class fft3dConvReLUPool(Layer):
                  detector_normalization = None,
                  min_zero = False,
                  output_normalization = None,
-                 kernel_stride = (1, 1, 1)):
+                 ):
         """
             layer_name: A name for this layer that will be prepended to
                         monitoring channels related to this layer.
@@ -176,7 +177,8 @@ class fft3dConvReLUPool(Layer):
         setup_detector_layer_b01tc(layer=self,
                                    input_space=space,
                                    rng=self.mlp.rng,
-                                   irange=self.irange)
+                                   irange=self.irange,
+                                   stride=self.kernel_stride)
         rng = self.mlp.rng
         detector_shape = self.detector_space.shape
 
@@ -202,8 +204,9 @@ class fft3dConvReLUPool(Layer):
 
         dummy_shape = [self.input_space.shape[0] , self.input_space.shape[1]]
 		
-        # added to find out output space shape after temporal and spatial pooling "max_pool_c01b" 	
-        dummy_output_shape = [int(np.ceil((i_sh + 2. * self.pad - k_sh) / float(k_st))) + 1
+        #self.kernel_stride =(1, 1, 1)
+		# added to find out output space shape after temporal and spatial pooling "max_pool_c01b" 	
+        dummy_output_shape = [int((i_sh + 2. * self.pad - k_sh) / float(k_st)) +1
                               for i_sh, k_sh, k_st in zip(dummy_shape,
                                                           self.kernel_shape,
                                                           self.kernel_stride)]
@@ -299,6 +302,8 @@ class fft3dConvReLUPool(Layer):
         """
         assert self.b.name is not None
         W, = self.transformer.get_params()
+        #print W.name
+        #W.name = "W"
         assert W.name is not None
         rval = self.transformer.get_params()
         assert not isinstance(rval, set)

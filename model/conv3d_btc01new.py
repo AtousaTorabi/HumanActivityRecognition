@@ -18,7 +18,7 @@ __email__ = "mirzamom@iro"
 import functools
 import numpy as np
 import warnings
-
+import math
 import theano
 from theano.sandbox import cuda
 import theano.tensor as T
@@ -36,8 +36,8 @@ from pylearn2.sandbox.cuda_convnet import check_cuda
 #from pylearn2.space import Conv3DSpace
 from HumanActivityRecognition.space import Conv3DSpace
 
-from theano.tensor.nnet.Conv3D import Conv3D
-from theano.tensor.nnet.conv3d2d import conv3d
+#from theano.tensor.nnet.Conv3D import Conv3D
+from HumanActivityRecognition.model.corr3d2d import conv3d
 
 
 def random_matrix(shape, np_rng, name=None):
@@ -124,15 +124,15 @@ class Conv3DB01TC(LinearTransform):
             raise NotImplementedError()
 
         print kernel_stride
-        if kernel_stride != (1, 1, 1):
-            raise ValueError("only values of kernel_stride with value of 1 "
-                             " are supported currently")
+        #if kernel_stride != (1, 1, 1):
+        #    raise ValueError("only values of kernel_stride with value of 1 "
+        #                     " are supported currently")
 
         self.input_axes = input_axes
         self.output_axes = output_axes
 
         #self.conv3d_op = Conv3D()
-        self.conv3d_op = conv3d()
+        #self.conv3d_op = conv3d()
 
         # filters should be a GPU shared variable.
         # I guess you could GpuFromHost them every time,
@@ -145,6 +145,7 @@ class Conv3DB01TC(LinearTransform):
         self.pad = pad
         self.partial_sum = partial_sum
         self.kernel_stride = kernel_stride
+        #self.kernel_stride = [1,1,1]
         self.signal_shape = signal_shape
         self.filter_shape = filter_shape
 
@@ -190,18 +191,13 @@ class Conv3DB01TC(LinearTransform):
         #x = shapeprint(x)
         #self._filters = shapeprint(self._filters)
 
-        x = x.dimshuffle(0,3,4,1,2)
-        self._filters = self._filters.dimshuffle(0,3,4,1,2)
-        #rval = self.conv3d_op(x, self._filters, self.b, self.kernel_stride)
-        rval = self.conv3d_op(x, self._filters)
-        x = x.dimshuffle(0,3,4,1,2)
-        self._filters = self._filters.dimshuffle(0,3,4,1,2)
+        im = x.dimshuffle(0,3,4,1,2)
+        filt = self._filters.dimshuffle(0,3,4,1,2)
+       
+        rval = conv3d(im, filt, None, None, (self.kernel_stride[0], self.kernel_stride[1]) )
+       
         rval = rval.dimshuffle(0,3,4,1,2)
-        #assert len(rval_axes) == 5
-
-        #op_axes = self.output_axes
-        #if tuple(rval_axes) != op_axes:
-        #    rval = rval.dimshuffle(*[op_axes.index(axis) for axis in rval_axes])
+        
         return rval
 
     def lmul_T(self, x):
@@ -216,7 +212,7 @@ class Conv3DB01TC(LinearTransform):
 def make_random_conv3D(irange,
                        input_axes, output_axes,
                        signal_shape, filter_shape,
-                       kernel_stride = (1,1,1), pad=0,
+                       kernel_stride = (2,2,1), pad=0,
                        message = "", rng = None,
                        partial_sum = None):
     if rng is None:
@@ -233,7 +229,7 @@ def make_random_conv3D(irange,
     # initialize weights
     print(_filter_5d_shape)
     W = sharedX(rng.uniform(-irange,irange,(_filter_5d_shape)))
-
+    print 'w is set'
     return Conv3DB01TC(filters = W,
                        input_axes = input_axes,
                        output_axes = output_axes,
@@ -242,7 +238,7 @@ def make_random_conv3D(irange,
                        kernel_stride = kernel_stride, pad=pad,
                        message = message, partial_sum=partial_sum)
 
-def setup_detector_layer_b01tc(layer, input_space, rng, irange):
+def setup_detector_layer_b01tc(layer, input_space, rng, irange,stride):
     """
     Takes steps to set up an object for use as being some kind of
     convolutional layer.
@@ -303,15 +299,17 @@ def setup_detector_layer_b01tc(layer, input_space, rng, irange):
 
 
     if hasattr(self, 'kernel_stride'):
-        kernel_stride = self.kernel_stride
+        kernel_stride = stride
     else:
-        kernel_stride = [1, 1, 1]
+        kernel_stride = stride
 
+    #import pdb; pdb.set_trace()
     #dummy_shape = [self.input_space.shape[0], self.input_space.shape[1] ]
-    output_shape = [int(np.ceil((i_sh + 2. * self.pad - k_sh) / float(k_st))) + 1
+    output_shape = [int((i_sh + 2. * self.pad - k_sh) / float(k_st)) +1
                     for i_sh, k_sh, k_st in zip(self.input_space.shape,
                                                 self.kernel_shape,
                                                 kernel_stride)]
+										
 
     def handle_kernel_shape(idx):
         if self.kernel_shape[idx] < 1:
